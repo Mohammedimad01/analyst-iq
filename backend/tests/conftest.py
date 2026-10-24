@@ -48,7 +48,8 @@ def engine(request):
             pytest.exit("--postgres needs TEST_DATABASE_URL in .env", returncode=2)
         if url == settings.database_url or url == settings.database_url_direct:
             pytest.exit("TEST_DATABASE_URL must not be the application database", returncode=2)
-        engine = create_engine(url, pool_pre_ping=True)
+        # A lock wait becomes a test error after 30 s instead of hanging the run.
+        engine = create_engine(url, pool_pre_ping=True, connect_args={"options": "-c lock_timeout=30000"})
     else:
         engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
         event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))

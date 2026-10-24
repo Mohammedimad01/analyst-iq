@@ -38,8 +38,10 @@ def synthetic_run(engine, tmp_path_factory):
     write_csv(path)
     org_id = get_demo_org_id(db)
     assert run_import(db, org_id, path.name, path.read_bytes(), 500_000).status == "completed"
-    yield d.detect(db, org_id, CFG)
+    result = d.detect(db, org_id, CFG)
+    # Close before yielding: an open transaction would block later tests' TRUNCATE on PostgreSQL forever.
     db.close()
+    return result
 
 
 def find(result, detector, segment, start):
