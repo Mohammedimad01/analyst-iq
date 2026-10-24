@@ -44,7 +44,7 @@ function SalesContent({ params }: { params: Record<string, string> }) {
                 onClick={() => setGrain(g.value)}
                 aria-pressed={grain === g.value}
                 className={`rounded-md px-2.5 py-1 text-xs font-medium ${
-                  grain === g.value ? "bg-primary text-white" : "text-ink-2 hover:text-ink"
+                  grain === g.value ? "bg-primary text-on-primary" : "text-ink-2 hover:text-ink"
                 }`}
               >
                 {g.label}

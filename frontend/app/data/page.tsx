@@ -180,7 +180,7 @@ function Uploader({ onImported, readOnly }: { onImported: () => void; readOnly: 
             <button
               onClick={upload}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-60"
             >
               {busy && <Loader2 className="size-3.5 animate-spin" />}
               {busy ? "Validating and importing…" : "Import file"}

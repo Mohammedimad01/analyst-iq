@@ -10,9 +10,9 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 function StateBox({ icon, title, children }: { icon: ReactNode; title: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line bg-surface px-6 py-14 text-center">
       <div className="text-ink-3">{icon}</div>
-      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="font-serif text-lg font-medium text-ink">{title}</p>
       {children && <div className="max-w-md text-sm text-ink-2">{children}</div>}
     </div>
   );
@@ -47,7 +47,7 @@ export function NoDataState() {
       <p>Import a CSV or Excel file, or load the synthetic demo dataset, to see your dashboard.</p>
       <Link
         href="/data"
-        className="mt-3 inline-flex rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
+        className="mt-3 inline-flex rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover"
       >
         Go to Data Sources
       </Link>

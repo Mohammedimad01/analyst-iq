@@ -6,7 +6,7 @@ import { HBarChart } from "@/components/charts/HBarChart";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { AnalyticsGate, PageSkeleton } from "@/components/shell/AnalyticsGate";
 import { Card, PageHeader } from "@/components/ui/Card";
-import { KpiCard } from "@/components/ui/KpiCard";
+import { KpiCard, KpiStrip } from "@/components/ui/KpiCard";
 import { ErrorState, NoMatchState, RefreshingBadge } from "@/components/ui/States";
 import { useApi } from "@/hooks/useApi";
 import { buildUrl } from "@/lib/api";
@@ -30,7 +30,7 @@ function CustomersContent({ params }: { params: Record<string, string> }) {
       </PageHeader>
 
       {data.warnings.length > 0 && (
-        <div className="mb-4 space-y-1 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="status">
+        <div className="mb-4 space-y-1 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="status">
           {data.warnings.map((w) => (
             <p key={w} className="flex gap-2">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -40,11 +40,11 @@ function CustomersContent({ params }: { params: Record<string, string> }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+      <KpiStrip>
         {data.kpis.map((k) => (
           <KpiCard key={k.key} kpi={k} />
         ))}
-      </div>
+      </KpiStrip>
 
       {active === 0 ? (
         <div className="mt-6">

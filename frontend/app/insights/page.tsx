@@ -37,7 +37,7 @@ function filterBody(params: Record<string, string>) {
 
 function AiNotConfigured() {
   return (
-    <div className="mb-4 flex gap-3 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="status">
+    <div className="mb-4 flex gap-3 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="status">
       <Settings2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <div>
         <p className="font-medium">Gemini is not configured, so AI explanations are switched off.</p>
@@ -172,7 +172,7 @@ function InsightsContent({ params }: { params: Record<string, string> }) {
                   type="submit"
                   disabled={aiOff !== null || busy !== null || question.trim().length < 3}
                   title={aiOff ?? undefined}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50"
                 >
                   {busy === "question" ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareText className="size-4" />}
                   Ask
@@ -207,12 +207,12 @@ function InsightsContent({ params }: { params: Record<string, string> }) {
           </Card>
 
           {busy && (
-            <div className="flex items-center gap-2 rounded-xl border border-line bg-surface p-5 text-sm text-ink-2" role="status">
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface p-5 text-sm text-ink-2" role="status">
               <Loader2 className="size-4 animate-spin" /> Computing verified metrics and asking Gemini to interpret them…
             </div>
           )}
           {aiError && !busy && (
-            <div className="rounded-xl border border-negative/30 bg-negative-soft px-4 py-3 text-sm" role="alert">
+            <div className="rounded-lg border border-negative/30 bg-negative-soft px-4 py-3 text-sm" role="alert">
               <p className="flex items-center gap-2 font-medium text-negative">
                 <AlertTriangle className="size-4" aria-hidden="true" /> No AI insight was produced
               </p>
@@ -235,7 +235,7 @@ function InsightsContent({ params }: { params: Record<string, string> }) {
               <button
                 onClick={runDetection}
                 disabled={detecting}
-                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-on-primary hover:bg-primary-hover disabled:opacity-60"
               >
                 {detecting ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
                 {currentRun ? "Re-run" : "Run detection"}

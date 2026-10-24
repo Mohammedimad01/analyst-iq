@@ -126,12 +126,12 @@ export function TrendChart<P extends TrendLike>({
                   strokeWidth={2}
                   dot={(d: { cx?: number; cy?: number; index?: number; payload?: P }) =>
                     d.payload?.partial ? (
-                      <circle key={d.index} cx={d.cx} cy={d.cy} r={3.5} fill="#fff" stroke={s.color} strokeWidth={2} />
+                      <circle key={d.index} cx={d.cx} cy={d.cy} r={3.5} fill="var(--color-surface)" stroke={s.color} strokeWidth={2} />
                     ) : (
                       <g key={d.index} />
                     )
                   }
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--color-surface)" }}
                   isAnimationActive={false}
                 />
               ) : (

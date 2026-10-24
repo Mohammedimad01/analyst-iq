@@ -122,7 +122,7 @@ function ReportsContent({ params }: { params: Record<string, string> }) {
                   key={f}
                   onClick={() => setFormat(f)}
                   aria-pressed={format === f}
-                  className={`rounded-md px-3 py-1 text-xs font-medium ${format === f ? "bg-primary text-white" : "text-ink-2 hover:text-ink"}`}
+                  className={`rounded-md px-3 py-1 text-xs font-medium ${format === f ? "bg-primary text-on-primary" : "text-ink-2 hover:text-ink"}`}
                 >
                   {f.toUpperCase()}
                 </button>
@@ -131,7 +131,7 @@ function ReportsContent({ params }: { params: Record<string, string> }) {
             <button
               onClick={generate}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-60"
             >
               {busy && <Loader2 className="size-4 animate-spin" />}
               {busy ? "Generating…" : "Generate report"}

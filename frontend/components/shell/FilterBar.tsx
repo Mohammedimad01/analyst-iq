@@ -6,7 +6,7 @@ import { PRESET_LABELS, useFilters, type RangePreset } from "@/components/shell/
 import { channelLabel, formatDate } from "@/lib/format";
 
 const selectClass =
-  "h-8 rounded-md border border-line-strong bg-surface px-2 text-sm text-ink hover:border-ink-3 disabled:opacity-50";
+  "h-8 rounded-md border border-line bg-surface px-2 text-[13px] text-ink hover:border-line-strong disabled:opacity-50";
 
 export function FilterBar() {
   const f = useFilters();
@@ -14,7 +14,7 @@ export function FilterBar() {
   if (!options?.has_data) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2 md:px-6" aria-label="Filters" role="group">
+    <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2 md:px-8" aria-label="Filters" role="group">
       <CalendarRange className="size-4 text-ink-3" aria-hidden="true" />
       <label className="sr-only" htmlFor="range-preset">Date range</label>
       <select

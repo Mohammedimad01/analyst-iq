@@ -27,7 +27,7 @@ export function InsightView({ insight }: { insight: InsightRead }) {
   const ruleBased = insight.model === "rules";
 
   return (
-    <article className="rounded-xl border border-line bg-surface p-5" aria-label="AI insight">
+    <article className="rounded-lg border border-line bg-surface p-5" aria-label="AI insight">
       <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
         <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 font-medium text-primary">
           <Sparkles className="size-3" aria-hidden="true" />

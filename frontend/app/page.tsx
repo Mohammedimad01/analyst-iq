@@ -4,7 +4,7 @@ import { HBarChart } from "@/components/charts/HBarChart";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { AnalyticsGate, PageSkeleton } from "@/components/shell/AnalyticsGate";
 import { Card, PageHeader } from "@/components/ui/Card";
-import { KpiCard } from "@/components/ui/KpiCard";
+import { KpiCard, KpiStrip } from "@/components/ui/KpiCard";
 import { ErrorState, NoMatchState, RefreshingBadge } from "@/components/ui/States";
 import { useApi } from "@/hooks/useApi";
 import { buildUrl } from "@/lib/api";
@@ -48,11 +48,11 @@ function OverviewContent({ params }: { params: Record<string, string> }) {
         <RefreshingBadge show={refreshing} />
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-        {PRIMARY.map((key) => kpis[key] && <KpiCard key={key} kpi={kpis[key]} />)}
-      </div>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-        {SECONDARY.map((key) => kpis[key] && <KpiCard key={key} kpi={kpis[key]} compact />)}
+      <KpiStrip>{PRIMARY.map((key) => kpis[key] && <KpiCard key={key} kpi={kpis[key]} />)}</KpiStrip>
+      <div className="mt-3">
+        <KpiStrip columns="xl:grid-cols-5">
+          {SECONDARY.map((key) => kpis[key] && <KpiCard key={key} kpi={kpis[key]} compact />)}
+        </KpiStrip>
       </div>
 
       {!hasSales ? (

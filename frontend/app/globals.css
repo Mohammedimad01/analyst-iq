@@ -1,56 +1,166 @@
 @import "tailwindcss";
 
 /*
- * Analyst IQ design tokens. Light theme only for Milestone 1.
- * Chart series/ink values follow the validated reference data-viz palette (blue slot 1, orange slot 2).
+ * Analyst IQ — editorial analytics. Tokens are CSS variables so light/dark swap in one place (see DESIGN.md).
+ * Theme: OS preference by default; [data-theme] on <html> (header toggle) wins both ways.
  */
+:root {
+  color-scheme: light;
+  --page: #f6f4ef;
+  --surface: #fffefb;
+  --subtle: #efece5;
+  --line: #e2ddd2;
+  --line-strong: #cfc8ba;
+  --ink: #1a1916;
+  --ink-2: #4e4a42;
+  --ink-3: #6f6a60;
+  --accent: #1f4f86;
+  --accent-hover: #173d69;
+  --accent-soft: #e4ecf6;
+  --on-accent: #ffffff;
+  --positive: #2d6a3e;
+  --positive-soft: #e3efe5;
+  --negative: #a33a30;
+  --negative-soft: #f6e3e0;
+  --warning: #8a5a00;
+  --warning-soft: #f6ecd6;
+  --series-1: #1f4f86;
+  --series-2: #b4532a;
+  --grid: #e6e1d7;
+  --axis: #8a8478;
+  --tooltip: #1a1916;
+  --on-tooltip: #f6f4ef;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #141311;
+    --surface: #1c1a17;
+    --subtle: #23211d;
+    --line: #2f2c27;
+    --line-strong: #3d3a33;
+    --ink: #ece8e0;
+    --ink-2: #bdb7ab;
+    --ink-3: #8f897d;
+    --accent: #86aee0;
+    --accent-hover: #a3c3ea;
+    --accent-soft: #1d2a3a;
+    --on-accent: #10161f;
+    --positive: #7fbf8e;
+    --positive-soft: #1b2a1f;
+    --negative: #e48a80;
+    --negative-soft: #321d1a;
+    --warning: #d6a64a;
+    --warning-soft: #2e2615;
+    --series-1: #86aee0;
+    --series-2: #d9824f;
+    --grid: #2a2823;
+    --axis: #8f897d;
+    --tooltip: #ece8e0;
+    --on-tooltip: #141311;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #141311;
+  --surface: #1c1a17;
+  --subtle: #23211d;
+  --line: #2f2c27;
+  --line-strong: #3d3a33;
+  --ink: #ece8e0;
+  --ink-2: #bdb7ab;
+  --ink-3: #8f897d;
+  --accent: #86aee0;
+  --accent-hover: #a3c3ea;
+  --accent-soft: #1d2a3a;
+  --on-accent: #10161f;
+  --positive: #7fbf8e;
+  --positive-soft: #1b2a1f;
+  --negative: #e48a80;
+  --negative-soft: #321d1a;
+  --warning: #d6a64a;
+  --warning-soft: #2e2615;
+  --series-1: #86aee0;
+  --series-2: #d9824f;
+  --grid: #2a2823;
+  --axis: #8f897d;
+  --tooltip: #ece8e0;
+  --on-tooltip: #141311;
+}
+
 @theme inline {
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-  --color-page: #f5f6f8;
-  --color-surface: #ffffff;
-  --color-subtle: #f8f9fb;
-  --color-line: #e4e6eb;
-  --color-line-strong: #d3d6dd;
-
-  --color-ink: #0f172a;
-  --color-ink-2: #475569;
-  --color-ink-3: #6b7280;
-
-  --color-navy: #0b1324;
-  --color-navy-2: #131d33;
-  --color-navy-line: #1f2a44;
-  --color-navy-ink: #c7cfdf;
-
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-primary-soft: #eef0ff;
-
-  --color-positive: #157f3c;
-  --color-positive-soft: #e8f6ee;
-  --color-negative: #c0262d;
-  --color-negative-soft: #fdeced;
-  --color-warning: #a35a00;
-  --color-warning-soft: #fff4e0;
-
-  --color-series-1: #2a78d6;
-  --color-series-2: #eb6834;
-  --color-grid: #e1e0d9;
-  --color-axis: #898781;
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-primary: var(--accent);
+  --color-primary-hover: var(--accent-hover);
+  --color-primary-soft: var(--accent-soft);
+  --color-on-primary: var(--on-accent);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-grid: var(--grid);
+  --color-axis: var(--axis);
+  --color-tooltip: var(--tooltip);
+  --color-on-tooltip: var(--on-tooltip);
 }
 
 body {
-  background: var(--color-page);
-  color: var(--color-ink);
+  background: var(--page);
+  color: var(--ink);
+  font-feature-settings: "ss01" on;
+  text-rendering: optimizeLegibility;
 }
 
-/* Visible keyboard focus everywhere; mouse clicks keep the clean look. */
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+input,
+select,
+textarea {
+  caret-color: var(--accent);
+  accent-color: var(--accent);
+}
+
 .tabular {
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Headline figures: serif, lining, tabular so columns of KPIs align. */
+.figure {
+  font-family: var(--font-serif);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
 }
