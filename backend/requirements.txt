@@ -1,0 +1,17 @@
+# Runtime
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.1
+pydantic-settings==2.16.1
+SQLAlchemy==2.1.6
+alembic==1.20.1
+psycopg[binary]==3.3.6
+pandas==3.1.0
+openpyxl==3.1.5
+python-multipart==0.0.32
+# Gemini SDK (Milestone 2; installed now so config can be validated)
+google-genai==2.33.0
+
+# Development / tests
+pytest==9.1.1
+httpx==0.28.1

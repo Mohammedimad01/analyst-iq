@@ -1,0 +1,12 @@
+order_id,line_number,order_date,store_id,store_name,channel,customer_id,product_sku,product_name,category,quantity,unit_price,discount_amount,unit_cost,status
+DEMO-1001,1,2026-07-01,S01,Downtown Flagship,in_store,C00001,APP-003,Organic Cotton Tee,Apparel,2,25.75,0,10.82,completed
+DEMO-1001,2,2026-07-01,S01,Downtown Flagship,in_store,C00001,GRO-001,Single-Origin Coffee 1kg,Grocery & Snacks,1,24.72,2.00,18.79,completed
+DEMO-1002,1,2026-07-01,ECOM,E-commerce Hub,online,C00002,ELE-002,Wireless Earbuds Pro,Electronics,1,132.87,0,101.33,completed
+DEMO-1003,1,2026-07-02,S03,Airport Kiosk,in_store,,BEA-001,Vitamin C Serum,Beauty,1,32.96,0,12.52,returned
+DEMO-1004,1,2026-07-02,S04,Suburban Plaza,in_store,C00010,SPO-002,Insulated Water Bottle,Sports & Outdoors,3,29.87,4.50,17.92,completed
+DEMO-1005,1,2026-07-03,S02,Riverside Mall,in_store,,HOM-003,French Press 1L,Home & Kitchen,-1,35.02,0,20.31,completed
+DEMO-1006,1,07/03/2026,S02,Riverside Mall,in_store,,HOM-005,Glass Storage Set,Home & Kitchen,1,29.87,0,17.32,completed
+DEMO-1007,1,2026-07-03,ECOM,E-commerce Hub,phone,C00003,APP-001,Merino Crew Sweater,Apparel,1,91.67,0,38.50,completed
+DEMO-1008,1,2026-07-04,S01,Downtown Flagship,in_store,,BEA-006,Lip Care Trio,Beauty,1,15.45,20.00,5.87,completed
+DEMO-1009,1,2026-07-04,S01,Downtown Flagship,in_store,,GRO-002,Dark Chocolate Bar,Grocery & Snacks,4,4.64,0,3.53,completed
+DEMO-1009,2,2026-07-04,S02,Riverside Mall,in_store,,GRO-003,Mixed Nuts 500g,Grocery & Snacks,1,12.36,0,9.39,completed

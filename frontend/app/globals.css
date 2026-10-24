@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/*
+ * Analyst IQ design tokens. Light theme only for Milestone 1.
+ * Chart series/ink values follow the validated reference data-viz palette (blue slot 1, orange slot 2).
+ */
+@theme inline {
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-page: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-subtle: #f8f9fb;
+  --color-line: #e4e6eb;
+  --color-line-strong: #d3d6dd;
+
+  --color-ink: #0f172a;
+  --color-ink-2: #475569;
+  --color-ink-3: #6b7280;
+
+  --color-navy: #0b1324;
+  --color-navy-2: #131d33;
+  --color-navy-line: #1f2a44;
+  --color-navy-ink: #c7cfdf;
+
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-soft: #eef0ff;
+
+  --color-positive: #157f3c;
+  --color-positive-soft: #e8f6ee;
+  --color-negative: #c0262d;
+  --color-negative-soft: #fdeced;
+  --color-warning: #a35a00;
+  --color-warning-soft: #fff4e0;
+
+  --color-series-1: #2a78d6;
+  --color-series-2: #eb6834;
+  --color-grid: #e1e0d9;
+  --color-axis: #898781;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+/* Visible keyboard focus everywhere; mouse clicks keep the clean look. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
