@@ -229,6 +229,9 @@ def record_deliveries(body: DeliveryRequest, db: DbSession, org_id: OrgId):
     insert_ = postgresql.insert if dialect == "postgresql" else sqlite.insert
     stmt = insert_(AutomationEvent.__table__).on_conflict_do_nothing(
         index_elements=["organization_id", "workflow", "item_key"])
-    created = sum(db.connection().execute(stmt.values(**r, created_at=utcnow())).rowcount for r in rows)
+    # Count rows RETURNING actually gives back: driver rowcount is -1 for this statement on psycopg.
+    table = AutomationEvent.__table__
+    created = sum(len(db.connection().execute(stmt.values(**r, created_at=utcnow()).returning(table.c.id)).all())
+                  for r in rows)
     db.commit()
     return {"workflow": body.workflow, "recorded": created, "already_recorded": len(rows) - created}
