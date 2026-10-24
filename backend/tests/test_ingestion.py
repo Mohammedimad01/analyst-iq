@@ -175,3 +175,14 @@ def test_import_history_endpoints(client):
     assert client.get(f"/api/v1/data/imports/{first_id}").json()["status"] == "completed"
     missing = client.get("/api/v1/data/imports/9999")
     assert missing.status_code == 404 and missing.json()["error"]["code"] == "not_found"
+
+
+def test_interrupted_imports_are_marked_failed(client, db, org_id):
+    from datetime import timedelta
+    stale = m.DataImport(organization_id=org_id, filename="x.csv", file_sha256="0" * 64, status="processing",
+                         errors=[], started_at=m.utcnow() - timedelta(hours=2))
+    db.add(stale)
+    db.commit()
+    assert upload(client, HEADER + GOOD).json()["status"] == "completed"
+    db.refresh(stale)
+    assert stale.status == "failed" and "Interrupted" in stale.message

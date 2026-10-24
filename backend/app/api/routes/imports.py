@@ -1,12 +1,13 @@
 from pathlib import PurePath
 from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy import func, select
 
 from app.api.deps import DbSession, OrgId
 from app.core.config import get_settings
 from app.core.errors import AppError
+from app.core.ratelimit import rate_limit
 from app.models import DataImport
 from app.schemas import ImportList, ImportRead
 from app.services.ingestion.importer import run_import
@@ -15,9 +16,13 @@ from app.services.ingestion.parsing import ALLOWED_EXTENSIONS
 router = APIRouter(prefix="/data/imports", tags=["data"])
 
 
-@router.post("", response_model=ImportRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ImportRead, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(rate_limit("upload", 10))])
 def create_import(db: DbSession, org_id: OrgId, file: Annotated[UploadFile, File()]):
     settings = get_settings()
+    if settings.read_only_mode:
+        raise AppError(403, "Uploads are disabled in this deployment (read-only demo). Load data with the CLI.",
+                       code="read_only")
     filename = PurePath(file.filename or "").name
     if PurePath(filename).suffix.lower() not in ALLOWED_EXTENSIONS:
         raise AppError(400, "Unsupported file type. Upload a .csv or .xlsx file.")
@@ -27,7 +32,7 @@ def create_import(db: DbSession, org_id: OrgId, file: Annotated[UploadFile, File
         raise AppError(413, f"File is larger than {settings.max_upload_mb} MB.")
     if not content:
         raise AppError(400, "The uploaded file is empty.")
-    return run_import(db, org_id, filename, content, settings.max_import_rows)
+    return run_import(db, org_id, filename, content, settings.max_import_rows, source="upload")
 
 
 @router.get("", response_model=ImportList)

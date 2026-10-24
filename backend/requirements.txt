@@ -11,6 +11,8 @@ openpyxl==3.1.5
 python-multipart==0.0.32
 # Gemini SDK (Milestone 2; installed now so config can be validated)
 google-genai==2.33.0
+# PDF reports (pure Python)
+fpdf2==2.8.9
 
 # Development / tests
 pytest==9.1.1

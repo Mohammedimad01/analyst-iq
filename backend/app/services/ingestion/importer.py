@@ -4,8 +4,9 @@ import hashlib
 import logging
 import time
 from collections.abc import Iterable, Iterator
+from datetime import timedelta
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 from sqlalchemy.orm import Session
 
 from app.models import Customer, DataImport, Order, OrderItem, Product, Store, utcnow
@@ -20,9 +21,17 @@ def _chunks(items: list, size: int = CHUNK) -> Iterator[list]:
         yield items[start:start + size]
 
 
-def run_import(db: Session, org_id: int, filename: str, content: bytes, max_rows: int) -> DataImport:
+def run_import(db: Session, org_id: int, filename: str, content: bytes, max_rows: int,
+               source: str = "upload") -> DataImport:
     started = time.perf_counter()
-    record = DataImport(organization_id=org_id, filename=filename[:255],
+    # A process killed mid-import leaves its record at "processing"; nothing was written (the data transaction
+    # rolled back), so say so instead of showing it as running forever.
+    db.execute(update(DataImport).where(
+        DataImport.organization_id == org_id, DataImport.status == "processing",
+        DataImport.started_at < utcnow() - timedelta(hours=1),
+    ).values(status="failed", finished_at=utcnow(),
+             message="Interrupted before completion (the process stopped). Nothing was written; import again."))
+    record = DataImport(organization_id=org_id, filename=filename[:255], source=source,
                         file_sha256=hashlib.sha256(content).hexdigest(), status="processing", errors=[])
     db.add(record)
     db.commit()  # the attempt is recorded even if everything below fails
@@ -95,9 +104,17 @@ def _ensure(db: Session, model, org_id: int, code_attr: str, wanted: dict[str, d
             model.organization_id == org_id, code_col.in_(chunk))).all())
     missing = [{"organization_id": org_id, code_attr: code, **attrs} for code, attrs in wanted.items()
                if code not in ids]
+    table = model.__table__
     for chunk in _chunks(missing):
-        ids.update(db.execute(insert(model).returning(code_col, model.id), chunk).all())
+        ids.update(_bulk(db, insert(table).returning(table.c[code_attr], table.c.id), chunk).all())
     return ids
+
+
+def _bulk(db: Session, stmt, rows: list[dict]):
+    # Core statement on the session's connection (same transaction). The ORM bulk path splits a batch whenever
+    # NULL-ness changes between rows (e.g. walk-in orders without customer_id): ~5 rows per round trip, which made
+    # a 35k-line import take over 10 minutes against a remote database instead of under a minute.
+    return db.connection().execute(stmt, rows)
 
 
 def _first_wins(pairs: Iterable[tuple[str, dict]]) -> dict[str, dict]:
@@ -123,8 +140,9 @@ def _write_orders(db: Session, org_id: int, import_id: int, result: ParseResult)
                    "store_id": store_ids[d.store_code], "customer_id": customer_ids.get(d.customer_code),
                    "channel": d.channel, "status": d.status, "import_id": import_id, "created_at": utcnow()}
                   for d in drafts]
+    orders = Order.__table__
     for chunk in _chunks(order_rows):
-        order_ids.update(db.execute(insert(Order).returning(Order.order_number, Order.id), chunk).all())
+        order_ids.update(_bulk(db, insert(orders).returning(orders.c.order_number, orders.c.id), chunk).all())
 
     item_rows = [{"order_id": order_ids[d.order_number], "line_number": line.line_number,
                   "product_id": product_ids[line.product_sku], "quantity": line.quantity,
@@ -132,5 +150,5 @@ def _write_orders(db: Session, org_id: int, import_id: int, result: ParseResult)
                   "unit_cost": line.unit_cost}
                  for d in drafts for line in d.lines]
     for chunk in _chunks(item_rows, 5000):
-        db.execute(insert(OrderItem), chunk)
+        _bulk(db, insert(OrderItem.__table__), chunk)
     return len(item_rows)

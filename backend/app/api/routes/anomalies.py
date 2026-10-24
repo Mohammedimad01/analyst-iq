@@ -2,12 +2,13 @@ import time
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.api.deps import DbSession, OrgId
 from app.core.errors import AppError
+from app.core.ratelimit import rate_limit
 from app.models import AnalysisRun
 from app.schemas import AnomalyRun, AnomalyRunList
 from app.services.anomaly_detection.detector import DetectionConfig, detect
@@ -44,7 +45,8 @@ def latest_run(db, org_id: int) -> AnalysisRun | None:
                      .order_by(AnalysisRun.id.desc()).limit(1))
 
 
-@router.post("/detect", response_model=AnomalyRun, status_code=201)
+@router.post("/detect", response_model=AnomalyRun, status_code=201,
+             dependencies=[Depends(rate_limit("detection", 10))])
 def run_detection(body: DetectRequest, db: DbSession, org_id: OrgId):
     if body.start_date and body.end_date and body.end_date < body.start_date:
         raise AppError(422, "end_date must be on or after start_date")

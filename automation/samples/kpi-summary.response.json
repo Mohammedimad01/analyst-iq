@@ -1,0 +1,149 @@
+{
+  "workflow": "kpi_summary",
+  "delivery_keys": [
+    "previous_week:2026-06-22"
+  ],
+  "should_notify": true,
+  "period": {
+    "start_date": "2026-06-22",
+    "end_date": "2026-06-28",
+    "days": 7
+  },
+  "contains_synthetic": true,
+  "kpis": [
+    {
+      "key": "net_revenue",
+      "label": "Net Revenue",
+      "unit": "currency",
+      "definition": "\u03a3(quantity \u00d7 unit price \u2212 discount) over completed orders. Excludes cancelled and returned orders, tax and shipping.",
+      "value": 22164.37,
+      "previous": 28377.83,
+      "abs_change": -6213.46,
+      "pct_change": -21.9,
+      "direction": "down",
+      "sentiment": "negative"
+    },
+    {
+      "key": "gross_profit",
+      "label": "Gross Profit",
+      "unit": "currency",
+      "definition": "Net Revenue \u2212 \u03a3(quantity \u00d7 unit cost) over completed orders.",
+      "value": 8006.4,
+      "previous": 10399.29,
+      "abs_change": -2392.89,
+      "pct_change": -23.01,
+      "direction": "down",
+      "sentiment": "negative"
+    },
+    {
+      "key": "gross_margin_pct",
+      "label": "Gross Margin",
+      "unit": "percent",
+      "definition": "Gross Profit \u00f7 Net Revenue \u00d7 100.",
+      "value": 36.12,
+      "previous": 36.65,
+      "abs_change": -0.53,
+      "pct_change": null,
+      "direction": "down",
+      "sentiment": "negative"
+    },
+    {
+      "key": "orders",
+      "label": "Orders",
+      "unit": "count",
+      "definition": "Number of distinct completed orders.",
+      "value": 191,
+      "previous": 224,
+      "abs_change": -33,
+      "pct_change": -14.73,
+      "direction": "down",
+      "sentiment": "negative"
+    },
+    {
+      "key": "avg_order_value",
+      "label": "Avg Order Value",
+      "unit": "currency",
+      "definition": "Net Revenue \u00f7 completed orders.",
+      "value": 116.04,
+      "previous": 126.69,
+      "abs_change": -10.65,
+      "pct_change": -8.41,
+      "direction": "down",
+      "sentiment": "negative"
+    },
+    {
+      "key": "units_sold",
+      "label": "Units Sold",
+      "unit": "count",
+      "definition": "\u03a3 quantity over completed orders.",
+      "value": 510,
+      "previous": 664,
+      "abs_change": -154,
+      "pct_change": -23.19,
+      "direction": "down",
+      "sentiment": "negative"
+    },
+    {
+      "key": "gross_sales",
+      "label": "Gross Sales",
+      "unit": "currency",
+      "definition": "\u03a3(quantity \u00d7 unit price) over completed orders.",
+      "value": 22713.85,
+      "previous": 29188.35,
+      "abs_change": -6474.5,
+      "pct_change": -22.18,
+      "direction": "down",
+      "sentiment": "negative"
+    },
+    {
+      "key": "discounts",
+      "label": "Discounts",
+      "unit": "currency",
+      "definition": "\u03a3 discount amount over completed orders.",
+      "value": 549.48,
+      "previous": 810.52,
+      "abs_change": -261.04,
+      "pct_change": -32.21,
+      "direction": "down",
+      "sentiment": "neutral"
+    },
+    {
+      "key": "discount_rate_pct",
+      "label": "Discount Rate",
+      "unit": "percent",
+      "definition": "Discounts \u00f7 Gross Sales \u00d7 100.",
+      "value": 2.42,
+      "previous": 2.78,
+      "abs_change": -0.36,
+      "pct_change": null,
+      "direction": "down",
+      "sentiment": "positive"
+    },
+    {
+      "key": "return_rate_pct",
+      "label": "Return Rate",
+      "unit": "percent",
+      "definition": "Returned orders \u00f7 (completed + returned orders) \u00d7 100.",
+      "value": 4.98,
+      "previous": 4.27,
+      "abs_change": 0.71,
+      "pct_change": null,
+      "direction": "up",
+      "sentiment": "negative"
+    },
+    {
+      "key": "cancellation_rate_pct",
+      "label": "Cancellation Rate",
+      "unit": "percent",
+      "definition": "Cancelled orders \u00f7 all orders \u00d7 100.",
+      "value": 1.95,
+      "previous": 3.31,
+      "abs_change": -1.36,
+      "pct_change": null,
+      "direction": "down",
+      "sentiment": "positive"
+    }
+  ],
+  "message": "Analyst IQ KPI summary, 2026-06-22 to 2026-06-28 (vs previous 7 days)\nNote: synthetic demo data, not real business performance.\nNet Revenue: $22,164.37 (-21.9%)\nGross Profit: $8,006.40 (-23.0%)\nGross Margin: 36.1% (-0.5 pp)\nOrders: 191 (-14.7%)\nAvg Order Value: $116.04 (-8.4%)\nReturn Rate: 5.0% (+0.7 pp)\nLargest category movers: Sports & Outdoors -$2,335.03; Beauty -$1,004.39; Electronics -$886.74",
+  "ai": null
+}

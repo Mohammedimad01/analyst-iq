@@ -1,0 +1,36 @@
+# Render Blueprint for the API (free web service). Not deployed: create it from the Render dashboard
+# ("New > Blueprint", pick this repo) and enter the secret values there. Free services sleep after 15 minutes
+# idle (about 1 minute to wake), get 750 instance hours/month, and have no persistent disk (reports are stored
+# in PostgreSQL, so that is fine).
+services:
+  - type: web
+    name: analyst-iq-api
+    runtime: python
+    plan: free
+    region: virginia  # same AWS region as the Neon project (us-east-1)
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Migrations run on start: free instances have no pre-deploy step.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.7
+      - key: ENVIRONMENT
+        value: production
+      - key: READ_ONLY_MODE
+        value: "true"
+      - key: DATABASE_URL          # Neon pooled URL
+        sync: false
+      - key: DATABASE_URL_DIRECT   # Neon direct URL (migrations)
+        sync: false
+      - key: CORS_ORIGINS          # your Vercel URL, e.g. https://analyst-iq.vercel.app
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: AUTOMATION_API_KEY
+        sync: false
+      - key: ORGANIZATION_NAME
+        value: Demo Retail Co

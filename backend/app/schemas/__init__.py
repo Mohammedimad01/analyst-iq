@@ -80,9 +80,17 @@ class SalesAnalytics(BaseModel):
     by_channel: list[BreakdownRow]
 
 
+class Concentration(BaseModel):
+    top_fraction_pct: int
+    top_count: int
+    item_count: int
+    share_pct: Num | None
+
+
 class BreakdownPage(BaseModel):
     dimension: Literal["product", "category", "store", "channel"]
     period: Period
+    concentration: Concentration
     total: int
     limit: int
     offset: int
@@ -232,3 +240,88 @@ class InsightList(BaseModel):
     limit: int
     offset: int
     items: list[InsightSummary]
+
+
+# ---------------------------------------------------------------- workspace and customers
+
+class LastImport(BaseModel):
+    id: int
+    filename: str
+    status: str
+    source: Literal["upload", "synthetic_demo"]
+    finished_at: datetime | None
+
+
+class Workspace(BaseModel):
+    organization_name: str
+    data_kind: Literal["none", "synthetic", "imported", "mixed"]
+    synthetic_orders: int
+    imported_orders: int
+    last_import: LastImport | None
+    database_backend: Literal["postgresql", "sqlite"]
+    read_only: bool
+    ai_configured: bool
+    ai_model: str | None
+    automation_configured: bool
+    single_organization: bool
+
+
+class CustomerTrendPoint(BaseModel):
+    period_start: date
+    active_customers: int
+    new_customers: int
+    partial: bool
+
+
+class CustomerTrend(BaseModel):
+    grain: Literal["day", "week", "month"]
+    points: list[CustomerTrendPoint]
+
+
+class CustomerSegment(BaseModel):
+    segment: str
+    customers: int
+    orders: int
+    net_revenue: Num
+    share_pct: Num | None
+
+
+class TopCustomer(BaseModel):
+    customer_code: str
+    net_revenue: Num
+    orders: int
+    share_pct: Num | None
+
+
+class CustomerAnalytics(BaseModel):
+    period: Period
+    kpis: list[Kpi]
+    trend: CustomerTrend
+    segments: list[CustomerSegment]
+    top_customers: list[TopCustomer]
+    concentration: Concentration
+    history_days_before_period: int
+    warnings: list[str]
+
+
+# ---------------------------------------------------------------- reports
+
+class ReportSummary(BaseModel):
+    id: int
+    report_type: Literal["executive", "sales", "product", "store", "customer", "profitability"]
+    title: str
+    file_format: Literal["pdf", "csv"]
+    filename: str
+    size_bytes: int
+    contains_synthetic: bool
+    requested_by: str
+    params: dict
+    created_at: datetime
+    duration_ms: int | None
+
+
+class ReportList(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[ReportSummary]

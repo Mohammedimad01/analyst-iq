@@ -3,9 +3,11 @@ from decimal import Decimal
 
 from alembic import command
 from alembic.config import Config
+import pytest
 from sqlalchemy import create_engine, inspect
 
 from app.core.config import BACKEND_DIR
+from app.db.session import Base
 from app.demo import synthetic
 
 
@@ -42,3 +44,25 @@ def test_migrations_upgrade_and_downgrade(tmp_path):
     assert {"organizations", "stores", "customers", "products", "orders", "order_items", "data_imports"} <= tables
     command.downgrade(cfg, "base")
     assert set(inspect(create_engine(url)).get_table_names()) <= {"alembic_version"}
+
+
+@pytest.mark.postgres_only
+def test_migrations_on_postgres(engine):
+    """Same migration chain on the PostgreSQL test database; the suite's tables are restored afterwards."""
+    url = engine.url.render_as_string(hide_password=False)
+    cfg = Config(str(BACKEND_DIR / "alembic.ini"))
+    cfg.attributes["database_url"] = url
+    Base.metadata.drop_all(engine)
+    try:
+        command.upgrade(cfg, "head")
+        inspector = inspect(engine)
+        assert {"orders", "order_items", "ai_insights", "analysis_runs"} <= set(inspector.get_table_names())
+        checks = {c["name"] for c in inspector.get_check_constraints("order_items")}
+        assert "ck_order_items_discount_range" in checks
+        command.downgrade(cfg, "base")
+        assert set(inspect(engine).get_table_names()) <= {"alembic_version"}
+    finally:
+        with engine.begin() as conn:
+            conn.exec_driver_sql("DROP TABLE IF EXISTS alembic_version")
+        Base.metadata.drop_all(engine)
+        Base.metadata.create_all(engine)

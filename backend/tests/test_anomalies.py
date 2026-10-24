@@ -5,11 +5,8 @@ from datetime import date, timedelta
 
 import pandas as pd
 import pytest
-from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.db.session import Base
 from app.demo.synthetic import write_csv
 from app.services.anomaly_detection import detector as d
 from app.services.ingestion.importer import run_import
@@ -32,10 +29,10 @@ def is_injected(a: dict) -> bool:
 
 
 @pytest.fixture(scope="module")
-def synthetic_run(tmp_path_factory):
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
-    Base.metadata.create_all(engine)
+def synthetic_run(engine, tmp_path_factory):
+    from tests.conftest import reset_tables
+
+    reset_tables(engine)
     db = sessionmaker(bind=engine, expire_on_commit=False)()
     path = tmp_path_factory.mktemp("data") / "retail.csv"
     write_csv(path)

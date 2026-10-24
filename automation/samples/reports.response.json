@@ -1,0 +1,30 @@
+{
+  "workflow": "scheduled_report",
+  "reused": false,
+  "report": {
+    "id": 4,
+    "report_type": "executive",
+    "title": "Executive Summary - Demo Retail Co",
+    "file_format": "pdf",
+    "filename": "analyst-iq-executive-summary-2026-05-01-to-2026-05-31.pdf",
+    "size_bytes": 10040,
+    "contains_synthetic": true,
+    "requested_by": "automation",
+    "params": {
+      "type": "executive",
+      "format": "pdf",
+      "start_date": "2026-05-01",
+      "end_date": "2026-05-31",
+      "store": [],
+      "category": [],
+      "channel": []
+    },
+    "created_at": "2026-10-24T13:11:31.955996+00:00",
+    "duration_ms": 5021
+  },
+  "download_path": "/api/v1/automation/reports/4/download",
+  "delivery_keys": [
+    "report:4"
+  ],
+  "should_notify": true
+}

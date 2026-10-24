@@ -1,0 +1,313 @@
+{
+  "name": "Analyst IQ - Anomaly alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 7,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "0b5dc732-f5f6-5977-be94-f8bcc081c95c",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa5c4982-b873-58c4-95c6-22976337941d",
+              "name": "apiUrl",
+              "value": "http://localhost:8000",
+              "type": "string"
+            },
+            {
+              "id": "54ea1bce-db5a-5743-8dfc-cc6d6c2df354",
+              "name": "notifyTo",
+              "value": "you@example.com",
+              "type": "string"
+            },
+            {
+              "id": "128cb1a3-7d45-57f3-ad6b-e004386e35f2",
+              "name": "notifyFrom",
+              "value": "analyst-iq@example.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "02df90c9-be30-5ddf-9a0c-95497b8a44eb",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').item.json.apiUrl }}/api/v1/automation/anomaly-alerts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"min_severity\": \"high\", \"run_detection\": true}"
+      },
+      "id": "ccf242bd-6a08-5455-aaf1-51eb0c1327be",
+      "name": "Check anomalies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Analyst IQ API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "66b59e80-9317-56e8-8251-3e00ee56f817",
+              "leftValue": "={{ $('Check anomalies').item.json.should_notify }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2d4ee46b-492b-52b6-bd7c-ba437dd3dd85",
+      "name": "Should notify?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Config').item.json.notifyFrom }}",
+        "toEmail": "={{ $('Config').item.json.notifyTo }}",
+        "subject": "=Analyst IQ: {{ $('Check anomalies').item.json.delivery_keys.length }} new anomalies",
+        "emailFormat": "text",
+        "text": "={{ $('Check anomalies').item.json.message }}",
+        "options": {}
+      },
+      "id": "276bff97-1f91-5a9f-bbdc-47af781f3149",
+      "name": "Send notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        -160
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').item.json.apiUrl }}/api/v1/automation/deliveries",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow: 'anomaly_alert', item_keys: $('Check anomalies').item.json.delivery_keys }) }}"
+      },
+      "id": "b5c10522-e0f6-5ef4-b9fa-6199f7de5b41",
+      "name": "Record delivery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Analyst IQ API"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "id": "23daa56d-c4f5-5d95-95d4-90c5dbdc6939",
+      "name": "Nothing new",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        880,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "Analyst IQ Anomaly alerts: API request failed after retries. Check the API URL, the X-API-Key credential, and the API logs."
+      },
+      "id": "ccd59779-049b-5ff2-9c9b-a97ad3c73b01",
+      "name": "API request failed",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        660,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "Notification was sent but the delivery could not be recorded; it may be sent again next run."
+      },
+      "id": "4c298017-307a-5599-8aff-068dfc4e7710",
+      "name": "Recording delivery failed",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        -60
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Check anomalies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check anomalies": {
+      "main": [
+        [
+          {
+            "node": "Should notify?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API request failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should notify?": {
+      "main": [
+        [
+          {
+            "node": "Send notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing new",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send notification": {
+      "main": [
+        [
+          {
+            "node": "Record delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record delivery": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Recording delivery failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "analystIqNote": "Only anomalies not yet delivered are returned, so retries and re-runs never repeat an alert."
+  },
+  "tags": []
+}

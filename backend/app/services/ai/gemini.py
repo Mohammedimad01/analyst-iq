@@ -54,8 +54,10 @@ class GoogleGeminiClient:
             if exc.code in (401, 403):
                 raise AiError("ai_auth_failed", "Gemini rejected the API key. Check GEMINI_API_KEY.", 503)
             if exc.code == 404:
+                # Google's message names the replacement model when one is retired; it contains no secrets.
+                hint = f" Provider says: {str(exc.message)[:200]}" if exc.message else ""
                 raise AiError("ai_model_not_found", f"Model '{self.model}' is not available to this API key. "
-                                                    "Check GEMINI_MODEL.", 503)
+                                                    f"Check GEMINI_MODEL.{hint}", 503)
             raise AiError("ai_bad_request", f"Gemini rejected the request ({exc.code}).", 502)
         except errors.ServerError as exc:
             raise AiError("ai_provider_error", f"Gemini had a server error ({exc.code}).", 502, retryable=True)

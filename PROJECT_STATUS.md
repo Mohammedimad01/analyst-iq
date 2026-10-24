@@ -1,99 +1,68 @@
 # Project Status
 
-_Last updated: 2026-10-24, end of the Milestone 2 session._
+_Last updated: 2026-10-24 — completion session (uncommitted, awaiting review)._
 
-| Milestone | Status |
+| Area | Status |
 |---|---|
-| 1 — Analytics foundation | ✅ complete on SQLite; PostgreSQL run pending a `DATABASE_URL` |
-| 2 — Anomalies + AI insights | ✅ built and tested with a fake Gemini client; **live Gemini call pending a key** |
-| 3 — Reports + n8n automation | not started |
-| 4 — Auth, hardening, deployment | not started |
+| Analytics foundation (M1) | ✅ verified on **Neon PostgreSQL** |
+| Anomalies + grounded AI (M2) | ✅ verified with **live Gemini** (`gemini-3.5-flash-lite`) |
+| Customers, reports/exports, automation API, n8n, security, deployment config (M3/M4) | ✅ implemented and tested; n8n not executed; nothing deployed |
 
-## Milestone 2: what was built
+## Verified this session (evidence)
 
-- **Anomaly detection** (`services/anomaly_detection/detector.py`) has five interpretable detectors. Each run is stored in `analysis_runs`.
-  - API: `POST /anomalies/detect`, `GET /anomalies/latest?min_severity=`, `GET /anomalies/runs`.
-- **Gemini integration** (`services/ai/`) uses the `google-genai` SDK. Timeouts are configurable, there is exactly one retry for transient errors only, and every provider failure maps to a stable error code.
-- **Grounding check**: every number in the AI output must match a verified fact.
-  - An unmatched fact or list item is dropped, and the drop is recorded.
-  - An unmatched number in the title or summary rejects the whole insight.
-- **Insight types**:
-  - Executive summary.
-  - Anomaly explanation.
-  - Plain-English questions, routed through an allow-list of 5 intents. The model never writes SQL; a question that needs data we don't have gets a rule-based "can't answer" reply.
-- **Cost controls**: results are cached by evidence hash (a repeat request makes 0 API calls), the intent of a repeated question is reused, and there are per-minute and per-day limits. Nothing is generated on page load.
-- **AI Insights page**:
-  - The anomaly list has severity shown as icon + label, the method, and an "Explain with AI" button.
-  - There is a question box with examples and an executive summary button.
-  - The insight view separates facts, hypotheses, investigations and gaps, and shows the evidence sent to the AI.
-  - Recent history is listed, and a clear notice appears when Gemini isn't configured.
-- `python -m app.cli gemini-models` lists the models your key can use.
+- **Neon**: free project `analyst-iq` (us-east-1, PG 17) + separate `analyst_iq_test` database created via MCP.
+  Migrations 0001–0004 applied; seed imported 18,076 orders / 35,205 lines in 70 s.
+- **KPIs on PostgreSQL** equal the independent pandas figures: net revenue $324,648.99, profit $117,031.47,
+  2,710 orders, AOV $119.80, Riverside Mall $60,486.01. Weekly buckets Monday-aligned. Detection on PG: same 6 high flags.
+- **Gemini live**: executive summary, anomaly explanation (A1) and a question all completed, 0 statements dropped by the
+  number check; repeat request served from cache. `gemini-2.5-flash` is closed to new users (404); `gemini-3.8-flash`
+  returned 503 "high demand" at test time.
+- **Reports**: executive/customer PDFs and profitability CSV generated from Neon; PDF checked visually.
+- **Automation**: all endpoints called live with the key; no key → 401.
 
-## Tests executed (actual results)
+## Tests (actual results)
 
 | Check | Result |
 |---|---|
-| Backend `pytest -q` | **93 passed**, 0 warnings (was 47) |
-| Frontend `npm test` | 6 passed |
+| Backend `pytest -q` (SQLite) | **119 passed, 2 skipped** (`--postgres` migration test, `--live-gemini` test) |
+| Backend `pytest -q --postgres` (Neon test DB) | **not completed**: started, then stopped to save time (each test pays ~230 ms round trips; ~20+ min). CI runs it against a Postgres service container. |
+| `pytest --live-gemini` | not run as a test; same flows verified manually above |
+| Frontend `npm test` | **15 passed** (6 unit + 9 component) |
 | `npm run typecheck`, `npm run lint` | clean |
-| `npm run build` | success, 7 static routes incl. `/insights` |
+| `npm run build` | success, 11 routes |
+| n8n workflows | structurally validated only, not run in n8n |
 
-New backend tests:
-- **Anomaly detection (15).** Recall on A1–A4. A precision bound: no high-severity flag outside the injected anomalies, and at most 3 others. No alert on Black Friday. Plus unit tests for seasonality cancelling, the mirror effect, partial periods, YoY with a partial comparison week, the two-test daily spike, and minimum return volume. Plus API persistence and validation.
-- **AI (31).** Grounding: kept facts, dropped facts and a rejected summary. Every provider failure code. Retry happens exactly once and never on 429. The app rate limit, while cached results stay available. Caching with no second call. Anomaly explanation evidence. The question intent flow and intent reuse. Unsupported questions make no second call. A `run_sql` intent is rejected. Period resolution, the number verifier, and real SDK exceptions mapped to codes.
-- **Change drivers (1)**, hand-calculated.
+## Fixed this session
 
-## Verified in the browser (local SQLite, no Gemini key)
+- Gemini key was in tracked `.env.example` → moved to git-ignored `.env`, placeholder restored (never committed).
+- Import over a remote DB took >10 min (ORM bulk insert split batches on NULLs) → Core batch inserts, 70 s.
+- Imports killed mid-run stayed "processing" forever → auto-marked failed after 1 h.
+- PostgreSQL GROUP BY with bound parameters (workspace) → grouped on raw column.
+- `gemini-models` CLI closed its HTTP client early; 404 errors now include Google's replacement hint.
+- Hardcoded "Demo Retail Co" / "Synthetic demo data" header → real org name and data mix from `/workspace`.
 
-| Check | Result |
-|---|---|
-| Run detection from the UI | ✅ run stored. For the last 90 days it shows A2 (Beauty discounts, 3 high + 2 medium weeks), A3 (Earbuds returns), and 1 medium Online day |
-| `GET /anomalies/latest?min_severity=high` | ✅ exactly the 6 injected high items: A1 ×2, A2 ×3, A4 |
-| AI without a key | ✅ notice shown, AI buttons disabled, API returns 503 `ai_not_configured`, dashboards unaffected |
-| Mobile, 375 px | ✅ no horizontal scroll |
-| An insight from a real Gemini response, as shown in the UI | ⏳ **not verified**: needs a key. The rendering component is type-checked only |
+## Added
 
-## Acceptance test progress (brief §16)
+Customer analytics + page; concentration (products, customers); Reports page, 6 report types (PDF via fpdf2, CSV),
+9 CSV exports with formula-injection protection; Automation, Settings pages; `/automation/*` (X-API-Key,
+constant-time compare, two-step delivery de-duplication, idempotent reports); 4 n8n workflows + samples;
+rate limits on upload/detect/report/export/automation; security headers; `/docs` off in production;
+`READ_ONLY_MODE`; migrations 0003 (import source) and 0004 (reports, automation_events);
+`render.yaml`; `.github/workflows/ci.yml`; `pytest --postgres` / `--live-gemini`.
 
-| Step | Status |
-|---|---|
-| 1–9, 15: run, import, persist, verify KPIs, filter, restart | ✅ (Milestone 1) |
-| 3: PostgreSQL connectivity | ⏳ no `DATABASE_URL` yet |
-| 10–11: generate an AI insight that cites real metrics | ⏳ built and tested with a fake client; live call needs a key |
-| 12: AI failure path without breaking the dashboard | ✅ |
-| 13: detect an injected anomaly | ✅ all four |
-| 14: generate and download a report | ⏳ Milestone 3 |
+## Known limitations
 
-## Configuration still needed (yours)
+- **No authentication; single organisation.** Queries are org-scoped (tested) but anyone reaching the app sees its data.
+  Use `READ_ONLY_MODE=true` and synthetic data for public demos.
+- Synthetic generator gives customer C00001 ~20% of identified revenue (Pareto bug). Fixing needs a re-seed of Neon
+  (delete + reload) — awaiting your OK.
+- In-memory rate limits are per process. Free Render sleeps after 15 min (≈1 min cold start); Neon suspends after 5 min idle.
+- Vercel Hobby is for personal, non-commercial use.
 
-1. **Gemini**: set `GEMINI_API_KEY` in `.env`, run `python -m app.cli gemini-models` from `backend/`, and set
-   `GEMINI_MODEL` to one listed. Then restart the API. Check your account's free-tier limits in Google AI Studio.
-2. **Neon**: set `DATABASE_URL`, then run `python -m app.cli seed`. Migration 0002 is applied automatically.
-3. **Git**: nothing is committed yet.
+## Your next steps
 
-## Decisions made this milestone
-
-- Compare each segment with the **rest of the business** to cancel seasonality, rather than fit a seasonal model.
-  The z-score includes the variance of the rest. An own-history check is also required, so one segment's drop
-  doesn't make the others look like spikes (the "mirror" effect).
-- Severity needs **size and significance**, so small-count swings stay at medium.
-- **Number-level grounding**, not just prompt instructions. Prompts can be ignored; the check can't.
-- **Two Gemini calls per new question** (classify, then interpret). Repeats reuse the stored intent.
-- Failed AI attempts are stored, so audits and rate limits see them.
-- Category volume, margin-erosion and store-level daily detectors are deliberately left out (see `docs/INSIGHTS.md`).
-
-## Known issues / limitations
-
-- 3 medium-severity statistical flags on the synthetic data are not injected anomalies. This is expected from
-  Poisson tails, and the UI labels them as unconfirmed.
-- The AI output has not been exercised against the real Gemini API yet.
-- Rate limits count stored attempts per organisation. No per-user limits exist, because there is no authentication.
-- Milestone 1 limitations still apply: no auth, single demo org, SQLite run only.
-
-## Next concrete task
-
-1. Add a Gemini key and run one executive summary, one anomaly explanation and one question end to end.
-   Record the result here.
-2. Milestone 3: report generation (executive, sales, product, store, profitability) from the same KPI engine,
-   with CSV export first, then API-key-protected endpoints and the n8n workflows that call
-   `/anomalies/detect` and `/anomalies/latest?min_severity=high`.
+1. Review the diff, then commit and push (not done).
+2. Run `cd backend; .venv\Scripts\python -m pytest -q --postgres` once (≈20–30 min) or let CI do it.
+3. Deploy (not done): Render → New → Blueprint (this repo), fill the `sync: false` env vars; Vercel → import repo,
+   root `frontend`, set `NEXT_PUBLIC_API_URL` to the Render URL; then set `CORS_ORIGINS` on Render to the Vercel URL.
+4. Optionally run n8n (`npx n8n`) and import `automation/workflows/*.json` (see `automation/README.md`).

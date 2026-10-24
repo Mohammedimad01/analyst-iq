@@ -4,6 +4,7 @@ All money is aggregated in the database and rounded to cents here with Decimal. 
 denominator. Every function takes the same Filters object so KPIs, trends and breakdowns always agree.
 """
 
+import math
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -12,7 +13,7 @@ from typing import Literal
 from sqlalchemy import Date, Select, case, cast, distinct, func, literal_column, select
 from sqlalchemy.orm import Session
 
-from app.models import Order, OrderItem, Product, Store
+from app.models import Customer, Order, OrderItem, Product, Store
 
 Grain = Literal["day", "week", "month"]
 Dimension = Literal["product", "category", "store", "channel"]
@@ -307,3 +308,123 @@ def change_drivers(db: Session, org_id: int, f: Filters, dimension: Dimension) -
                      "previous_gross_margin_pct": prev["gross_margin_pct"] if prev else None})
     rows.sort(key=lambda r: (-abs(r["change"]), str(r["key"])))
     return rows
+
+
+# ---------------------------------------------------------------- concentration and customers
+
+def top_share(values: list[Decimal], fraction: float = 0.2) -> dict:
+    """Share of the total held by the top `fraction` of items (at least one item). None when there is no total."""
+    ordered = sorted((v for v in values if v > 0), reverse=True)
+    total = sum(ordered, ZERO)
+    n = max(1, math.ceil(len(ordered) * fraction)) if ordered else 0
+    return {"top_fraction_pct": round(fraction * 100), "top_count": n, "item_count": len(ordered),
+            "share_pct": ratio_pct(sum(ordered[:n], ZERO), total) if total else None}
+
+
+CUSTOMER_KPI_DEFS: tuple[KpiDef, ...] = (
+    KpiDef("active_customers", "Active Customers", "count", "up",
+           "Distinct identified customers with at least one completed order in the period."),
+    KpiDef("new_customers", "New Customers", "count", "up",
+           "Active customers whose first completed order ever (in all imported data) falls in the period."),
+    KpiDef("repeat_customer_rate_pct", "Repeat Customer Rate", "percent", "up",
+           "Active customers with 2+ completed orders in the period ÷ active customers × 100."),
+    KpiDef("orders_per_customer", "Purchase Frequency", "count", "up",
+           "Completed orders by identified customers ÷ active customers (orders per customer)."),
+    KpiDef("revenue_per_customer", "Revenue per Customer", "currency", "up",
+           "Net revenue from identified customers ÷ active customers."),
+    KpiDef("identified_revenue_share_pct", "Identified Revenue Share", "percent", "up",
+           "Net revenue from orders with a customer ID ÷ all net revenue × 100. Walk-in orders have no ID."),
+)
+
+
+def _customer_rows(db: Session, org_id: int, f: Filters) -> tuple[list, Decimal]:
+    """Per identified customer: completed orders and net revenue in the period; plus total net revenue."""
+    net = _gross - OrderItem.discount_amount
+    rows = db.execute(_filtered(select(
+        Order.customer_id, func.count(distinct(Order.id)), func.sum(net),
+    ), org_id, f).where(_completed, Order.customer_id.is_not(None)).group_by(Order.customer_id)).all()
+    total = db.scalar(_filtered(select(func.sum(net)), org_id, f).where(_completed))
+    return rows, money(total)
+
+
+def _first_order_dates(db: Session, org_id: int, customer_ids: list[int]) -> dict[int, date]:
+    """First completed order per customer across all data, ignoring filters: "new" means new to the business."""
+    out: dict[int, date] = {}
+    for start in range(0, len(customer_ids), 900):
+        chunk = customer_ids[start:start + 900]
+        out.update(db.execute(select(Order.customer_id, func.min(Order.order_date)).where(
+            Order.organization_id == org_id, _completed, Order.customer_id.in_(chunk))
+            .group_by(Order.customer_id)).all())
+    return out
+
+
+def customer_summary(db: Session, org_id: int, f: Filters) -> dict:
+    rows, total_net = _customer_rows(db, org_id, f)
+    active = len(rows)
+    identified_net = sum((money(r[2]) for r in rows), ZERO)
+    first = _first_order_dates(db, org_id, [r[0] for r in rows])
+    return {
+        "active_customers": active,
+        "new_customers": sum(1 for d in first.values() if f.start_date <= d <= f.end_date),
+        "repeat_customer_rate_pct": ratio_pct(sum(1 for r in rows if r[1] >= 2), active),
+        "orders_per_customer": safe_div(sum(r[1] for r in rows), active),
+        "revenue_per_customer": safe_div(identified_net, active),
+        "identified_revenue_share_pct": ratio_pct(identified_net, total_net),
+    }
+
+
+def customer_analytics(db: Session, org_id: int, f: Filters, grain: Grain | None = None) -> dict:
+    current = customer_summary(db, org_id, f)
+    previous = customer_summary(db, org_id, f.previous_period())
+    kpis = [compare(k, current[k.key], previous[k.key]) for k in CUSTOMER_KPI_DEFS]
+
+    rows, _ = _customer_rows(db, org_id, f)
+    revenue = {r[0]: money(r[2]) for r in rows}
+    orders = {r[0]: int(r[1]) for r in rows}
+    identified_net = sum(revenue.values(), ZERO)
+    top = sorted(revenue, key=lambda c: (-revenue[c], c))[:10]
+    codes = dict(db.execute(select(Customer.id, Customer.customer_code).where(Customer.id.in_(top))).all()) if top else {}
+    top_customers = [{"customer_code": codes[c], "net_revenue": revenue[c], "orders": orders[c],
+                      "share_pct": ratio_pct(revenue[c], identified_net)} for c in top]
+
+    # Segment mix (segment is optional in imports; missing becomes "unknown").
+    segment = func.coalesce(Customer.segment, "unknown")
+    seg_rows = db.execute(_filtered(select(
+        segment, func.count(distinct(Order.customer_id)), func.count(distinct(Order.id)),
+        func.sum(_gross - OrderItem.discount_amount),
+    ), org_id, f).join(Customer, Customer.id == Order.customer_id).where(_completed).group_by(segment)).all()
+    segments = sorted(({"segment": s, "customers": int(c), "orders": int(o), "net_revenue": money(n),
+                        "share_pct": ratio_pct(money(n), identified_net)} for s, c, o, n in seg_rows),
+                      key=lambda r: -r["net_revenue"])
+
+    # Trend: active customers per bucket (SQL) and first-time customers per bucket (from first-order dates).
+    grain = grain or auto_grain(f)
+    bucket = _bucket_expr(db.get_bind().dialect.name, grain).label("bucket")
+    active_by_bucket = dict(db.execute(_filtered(select(bucket, func.count(distinct(Order.customer_id))), org_id, f)
+                                       .where(_completed, Order.customer_id.is_not(None)).group_by(bucket)).all())
+    new_by_bucket: dict[date, int] = {}
+    for d in _first_order_dates(db, org_id, list(revenue)).values():
+        if f.start_date <= d <= f.end_date:
+            key = bucket_start(d, grain)
+            new_by_bucket[key] = new_by_bucket.get(key, 0) + 1
+    points, cur = [], bucket_start(f.start_date, grain)
+    while cur <= f.end_date:
+        nxt = _next_bucket(cur, grain)
+        points.append({"period_start": cur, "active_customers": int(active_by_bucket.get(cur, 0)),
+                       "new_customers": new_by_bucket.get(cur, 0),
+                       "partial": cur < f.start_date or nxt - timedelta(days=1) > f.end_date})
+        cur = nxt
+
+    data_min = db.scalar(select(func.min(Order.order_date)).where(Order.organization_id == org_id))
+    history_days = max((f.start_date - data_min).days, 0) if data_min else 0
+    warnings = []
+    share = current["identified_revenue_share_pct"]
+    if share is not None and share < 50:
+        warnings.append("Less than half of revenue comes from identified customers, so customer metrics describe "
+                        "a minority of sales.")
+    if history_days < 90:
+        warnings.append(f"Only {history_days} days of data precede this period, so some returning customers "
+                        "are counted as new.")
+    return {"kpis": kpis, "trend": {"grain": grain, "points": points}, "segments": segments,
+            "top_customers": top_customers, "concentration": top_share(list(revenue.values())),
+            "history_days_before_period": history_days, "warnings": warnings}

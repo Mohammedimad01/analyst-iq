@@ -75,9 +75,17 @@ export interface SalesAnalytics {
   by_channel: BreakdownRow[];
 }
 
+export interface Concentration {
+  top_fraction_pct: number;
+  top_count: number;
+  item_count: number;
+  share_pct: number | null;
+}
+
 export interface BreakdownPage {
   dimension: Dimension;
   period: Period;
+  concentration: Concentration;
   total: number;
   limit: number;
   offset: number;
@@ -218,4 +226,65 @@ export interface InsightList {
     model: string;
     error_code: string | null;
   }[];
+}
+
+// ---------------------------------------------------------------- workspace, customers, reports
+
+export type DataKind = "none" | "synthetic" | "imported" | "mixed";
+
+export interface Workspace {
+  organization_name: string;
+  data_kind: DataKind;
+  synthetic_orders: number;
+  imported_orders: number;
+  last_import: {
+    id: number;
+    filename: string;
+    status: string;
+    source: "upload" | "synthetic_demo";
+    finished_at: string | null;
+  } | null;
+  database_backend: "postgresql" | "sqlite";
+  read_only: boolean;
+  ai_configured: boolean;
+  ai_model: string | null;
+  automation_configured: boolean;
+  single_organization: boolean;
+}
+
+export interface CustomerAnalytics {
+  period: Period;
+  kpis: Kpi[];
+  trend: {
+    grain: Grain;
+    points: { period_start: string; active_customers: number; new_customers: number; partial: boolean }[];
+  };
+  segments: { segment: string; customers: number; orders: number; net_revenue: number; share_pct: number | null }[];
+  top_customers: { customer_code: string; net_revenue: number; orders: number; share_pct: number | null }[];
+  concentration: Concentration;
+  history_days_before_period: number;
+  warnings: string[];
+}
+
+export type ReportType = "executive" | "sales" | "product" | "store" | "customer" | "profitability";
+
+export interface ReportSummary {
+  id: number;
+  report_type: ReportType;
+  title: string;
+  file_format: "pdf" | "csv";
+  filename: string;
+  size_bytes: number;
+  contains_synthetic: boolean;
+  requested_by: string;
+  params: Record<string, unknown>;
+  created_at: string;
+  duration_ms: number | null;
+}
+
+export interface ReportList {
+  total: number;
+  limit: number;
+  offset: number;
+  items: ReportSummary[];
 }

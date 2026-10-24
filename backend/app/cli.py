@@ -38,7 +38,7 @@ def seed() -> int:
         generate()
     with SessionLocal() as db:
         record = run_import(db, get_demo_org_id(db), SAMPLE_CSV.name, SAMPLE_CSV.read_bytes(),
-                            get_settings().max_import_rows)
+                            get_settings().max_import_rows, source="synthetic_demo")
         print(f"Import #{record.id}: {record.status} - {record.message}")
         return 0 if record.status == "completed" else 1
 
@@ -50,7 +50,8 @@ def gemini_models() -> int:
     if not key:
         print("GEMINI_API_KEY is not set in .env")
         return 1
-    for model in genai.Client(api_key=key).models.list():
+    client = genai.Client(api_key=key)  # keep a reference: the pager needs the client's HTTP session alive
+    for model in client.models.list():
         if "generateContent" in (model.supported_actions or []):
             print(f"{(model.name or '').removeprefix('models/'):45} {model.display_name or ''}")
     return 0

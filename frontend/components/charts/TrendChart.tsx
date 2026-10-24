@@ -16,25 +16,31 @@ import {
 
 import { EmptyChart } from "@/components/ui/States";
 import { formatBucket } from "@/lib/format";
-import type { Grain, TrendPoint } from "@/types/api";
+import type { Grain } from "@/types/api";
 
-export interface Series {
-  key: "net_revenue" | "gross_profit" | "orders" | "units";
+/** Any bucketed series: revenue trends, customer trends, ... */
+export interface TrendLike {
+  period_start: string;
+  partial: boolean;
+}
+
+export interface Series<P extends TrendLike = TrendLike> {
+  key: Extract<keyof P, string>;
   label: string;
   color: string;
 }
 
 const AXIS = { stroke: "var(--color-axis)", fontSize: 11, tickLine: false } as const;
 
-function TrendTooltip({
+function TrendTooltip<P extends TrendLike>({
   active,
   payload,
   grain,
   series,
   format,
-}: Partial<TooltipContentProps> & { grain: Grain; series: Series[]; format: (v: number) => string }) {
+}: Partial<TooltipContentProps> & { grain: Grain; series: Series<P>[]; format: (v: number) => string }) {
   if (!active || !payload?.length) return null;
-  const point = payload[0].payload as TrendPoint;
+  const point = payload[0].payload as P;
   const prefix = grain === "week" ? "Week of " : "";
   return (
     <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-md">
@@ -49,14 +55,14 @@ function TrendTooltip({
             <span className="inline-block size-2 rounded-full" style={{ background: s.color }} />
             {s.label}
           </span>
-          <span className="tabular font-medium text-ink">{format(point[s.key])}</span>
+          <span className="tabular font-medium text-ink">{format(Number(point[s.key]))}</span>
         </p>
       ))}
     </div>
   );
 }
 
-function Legend({ series }: { series: Series[] }) {
+function Legend<P extends TrendLike>({ series }: { series: Series<P>[] }) {
   if (series.length < 2) return null;
   return (
     <div className="mb-2 flex gap-4 text-xs text-ink-2">
@@ -70,7 +76,7 @@ function Legend({ series }: { series: Series[] }) {
   );
 }
 
-export function TrendChart({
+export function TrendChart<P extends TrendLike>({
   points,
   grain,
   series,
@@ -79,15 +85,15 @@ export function TrendChart({
   kind = "line",
   height = 260,
 }: {
-  points: TrendPoint[];
+  points: P[];
   grain: Grain;
-  series: Series[];
+  series: Series<P>[];
   format: (v: number) => string;
   axisFormat: (v: number) => string;
   kind?: "line" | "bar";
   height?: number;
 }) {
-  if (!points.length || points.every((p) => series.every((s) => p[s.key] === 0))) {
+  if (!points.length || points.every((p) => series.every((s) => Number(p[s.key]) === 0))) {
     return <EmptyChart message="No completed sales in this period." />;
   }
   const Chart = kind === "line" ? LineChart : BarChart;
@@ -108,7 +114,7 @@ export function TrendChart({
             <YAxis {...AXIS} axisLine={false} width={56} tickFormatter={axisFormat} />
             <Tooltip
               cursor={kind === "line" ? { stroke: "var(--color-axis)", strokeWidth: 1 } : { fill: "var(--color-subtle)" }}
-              content={(props) => <TrendTooltip {...props} grain={grain} series={series} format={format} />}
+              content={(props) => <TrendTooltip<P> {...props} grain={grain} series={series} format={format} />}
             />
             {series.map((s) =>
               kind === "line" ? (
@@ -118,7 +124,7 @@ export function TrendChart({
                   name={s.label}
                   stroke={s.color}
                   strokeWidth={2}
-                  dot={(d: { cx?: number; cy?: number; index?: number; payload?: TrendPoint }) =>
+                  dot={(d: { cx?: number; cy?: number; index?: number; payload?: P }) =>
                     d.payload?.partial ? (
                       <circle key={d.index} cx={d.cx} cy={d.cy} r={3.5} fill="#fff" stroke={s.color} strokeWidth={2} />
                     ) : (

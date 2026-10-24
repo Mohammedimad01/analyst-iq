@@ -1,40 +1,77 @@
-"""Tests run on in-memory SQLite by default. Set TEST_DATABASE_URL to run the same suite on PostgreSQL
-(use a throwaway database: every test drops and recreates all tables)."""
+"""Tests run on in-memory SQLite by default.
 
-import os
+  pytest --postgres      run the same suite on TEST_DATABASE_URL (from .env). Every table in that database is
+                         emptied between tests, so it must be a throwaway database, never the app's DATABASE_URL.
+  pytest --live-gemini   also run tests marked live_gemini against the real API (uses quota; needs GEMINI_* set).
+"""
+
 from datetime import date
 from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.models as m
-from app.core.config import Settings
+from app.core.config import get_settings
 from app.db.session import Base, get_db
 from app.main import app
 
 
-def _make_test_engine():
-    url = os.environ.get("TEST_DATABASE_URL")
-    if url:
-        return create_engine(Settings(database_url=url).database_url)
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
-    return engine
+def pytest_addoption(parser):
+    parser.addoption("--postgres", action="store_true", help="run against TEST_DATABASE_URL (PostgreSQL)")
+    parser.addoption("--live-gemini", action="store_true", help="run tests that call the real Gemini API")
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "live_gemini: calls the real Gemini API (opt-in with --live-gemini)")
+    config.addinivalue_line("markers", "postgres_only: needs --postgres")
+
+
+def pytest_collection_modifyitems(config, items):
+    skips = {"live_gemini": (config.getoption("--live-gemini"), "needs --live-gemini"),
+             "postgres_only": (config.getoption("--postgres"), "needs --postgres")}
+    for item in items:
+        for marker, (enabled, reason) in skips.items():
+            if marker in item.keywords and not enabled:
+                item.add_marker(pytest.mark.skip(reason=reason))
 
 
 @pytest.fixture(scope="session")
-def engine():
-    return _make_test_engine()
+def engine(request):
+    if request.config.getoption("--postgres"):
+        settings = get_settings()
+        url = settings.test_database_url
+        if not url:
+            pytest.exit("--postgres needs TEST_DATABASE_URL in .env", returncode=2)
+        if url == settings.database_url or url == settings.database_url_direct:
+            pytest.exit("TEST_DATABASE_URL must not be the application database", returncode=2)
+        engine = create_engine(url, pool_pre_ping=True)
+    else:
+        engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+        event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    yield engine
+    engine.dispose()
+
+
+def reset_tables(engine) -> None:
+    """Empty every table. One TRUNCATE on PostgreSQL: dropping/recreating per test is too slow over the network."""
+    with engine.begin() as conn:
+        if conn.dialect.name == "postgresql":
+            names = ", ".join(t.name for t in Base.metadata.sorted_tables)
+            conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+        else:
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
 
 
 @pytest.fixture
 def db(engine) -> Session:
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
+    reset_tables(engine)
     session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)()
     yield session
     session.close()
@@ -83,3 +120,12 @@ def kpi_data(db, org_id):
     add_order(db, org_id, "O7", date(2025, 1, 31), s1, "in_store", "completed", [(p1, 1, "10.00", "0", "6.00")])
     db.commit()
     return org_id
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    from app.core import ratelimit
+
+    ratelimit.reset()
+    yield
+    ratelimit.reset()

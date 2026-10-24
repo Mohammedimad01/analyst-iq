@@ -264,3 +264,20 @@ def test_google_client_error_mapping(monkeypatch, exc, code, retryable):
     with pytest.raises(AiError) as info:
         c.generate_json("system", "prompt", questions.QuestionIntent)
     assert info.value.code == code and info.value.retryable is retryable
+
+
+@pytest.mark.live_gemini
+def test_live_gemini_end_to_end(client, kpi_data):
+    """Real provider, real grounding. Opt-in: pytest --live-gemini (uses 3 requests of quota)."""
+    settings = get_settings()
+    if not settings.gemini_configured:
+        pytest.skip("GEMINI_API_KEY / GEMINI_MODEL not set")
+    summary = client.post("/api/v1/insights/generate", json={"type": "executive_summary", **JAN})
+    assert summary.status_code == 201, summary.json()
+    body = summary.json()
+    assert body["status"] == "completed" and body["model"] == settings.gemini_model
+    keys = {f["key"] for f in body["facts"]}
+    assert all(f["evidence_key"] in keys for f in body["output"]["observed_facts"])
+    answer = client.post("/api/v1/insights/query", json={"question": "Which category made the most revenue?", **JAN})
+    assert answer.status_code == 201, answer.json()
+    assert answer.json()["intent"]["intent"] in ("ranking", "kpi_overview", "change_drivers")

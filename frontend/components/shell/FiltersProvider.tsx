@@ -5,7 +5,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { useApi } from "@/hooks/useApi";
 import { buildUrl, type ApiError } from "@/lib/api";
 import { addDays } from "@/lib/format";
-import type { FilterOptions } from "@/types/api";
+import type { FilterOptions, Workspace } from "@/types/api";
 
 export type RangePreset = "30d" | "90d" | "365d" | "all" | "custom";
 
@@ -24,6 +24,8 @@ export interface DateRange {
 }
 
 interface FiltersState {
+  /** Organisation, data source and feature flags (GET /workspace); null while loading or on error. */
+  workspace: Workspace | null;
   options: FilterOptions | null;
   optionsError: ApiError | null;
   optionsLoading: boolean;
@@ -54,7 +56,8 @@ export function presetRange(preset: RangePreset, options: FilterOptions): DateRa
 }
 
 export function FiltersProvider({ children }: { children: ReactNode }) {
-  const { data: options, error, loading, reload } = useApi<FilterOptions>(buildUrl("/dashboard/filters"));
+  const { data: options, error, loading, reload: reloadFilters } = useApi<FilterOptions>(buildUrl("/dashboard/filters"));
+  const { data: workspace, reload: reloadWorkspace } = useApi<Workspace>(buildUrl("/workspace"));
   const [preset, setPresetState] = useState<RangePreset>("90d");
   const [customRange, setCustomRangeState] = useState<DateRange | null>(null);
   // shortcut: one value per dimension in the UI although the API accepts several; add multi-select when asked.
@@ -65,10 +68,15 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
   const value = useMemo<FiltersState>(() => {
     const range = preset === "custom" ? customRange : options ? presetRange(preset, options) : null;
     return {
+      workspace,
       options,
       optionsError: error,
       optionsLoading: loading,
-      reloadOptions: reload,
+      // After an import both the filter options and the data-source labels change.
+      reloadOptions: () => {
+        reloadFilters();
+        reloadWorkspace();
+      },
       preset,
       range,
       setPreset: (next) => {
@@ -89,7 +97,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
         ? { start_date: range.start, end_date: range.end, store, category, channel }
         : null,
     };
-  }, [options, error, loading, reload, preset, customRange, store, category, channel]);
+  }, [workspace, options, error, loading, reloadFilters, reloadWorkspace, preset, customRange, store, category, channel]);
 
   return <FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>;
 }

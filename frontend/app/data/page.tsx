@@ -91,7 +91,7 @@ function ImportResult({ result }: { result: ImportRead }) {
   );
 }
 
-function Uploader({ onImported }: { onImported: () => void }) {
+function Uploader({ onImported, readOnly }: { onImported: () => void; readOnly: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -133,6 +133,17 @@ function Uploader({ onImported }: { onImported: () => void }) {
       setBusy(false);
     }
   };
+
+  if (readOnly) {
+    return (
+      <Card title="Import sales data">
+        <p className="text-sm text-ink-2">
+          Uploads are disabled in this deployment (read-only demo). Data is loaded by the operator with{" "}
+          <code>python -m app.cli seed</code> or in a local copy of the app.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card title="Import sales data" description="One row per order line. CSV (UTF-8) or Excel .xlsx; dates as YYYY-MM-DD.">
@@ -268,13 +279,14 @@ function History() {
 }
 
 export default function DataSourcesPage() {
-  const { reloadOptions } = useFilters();
+  const { reloadOptions, workspace } = useFilters();
   const [reloadToken, setReloadToken] = useState(0);
   return (
     <>
       <PageHeader title="Data Sources" description="Upload sales files. Every row is validated before anything is written." />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Uploader
+          readOnly={workspace?.read_only ?? false}
           onImported={() => {
             reloadOptions();
             setReloadToken((n) => n + 1);

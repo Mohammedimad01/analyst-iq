@@ -8,7 +8,7 @@ import { Card, PageHeader } from "@/components/ui/Card";
 import { ErrorState, NoMatchState, RefreshingBadge } from "@/components/ui/States";
 import { useApi } from "@/hooks/useApi";
 import { buildUrl } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPercent } from "@/lib/format";
 import type { BreakdownPage, SortKey } from "@/types/api";
 
 const PAGE_SIZE = 25;
@@ -46,7 +46,11 @@ function ProductsContent({ params }: { params: Record<string, string> }) {
       ) : (
         <Card
           title="Product performance"
-          description="Click a column to sort. Low-margin and low-volume products are easiest to spot by sorting ascending."
+          description={`Click a column to sort; ascending order surfaces low-margin and low-volume products.${
+            data.concentration.share_pct === null
+              ? ""
+              : ` Concentration: the top ${data.concentration.top_fraction_pct}% of products (${data.concentration.top_count} of ${data.concentration.item_count}) earn ${formatPercent(data.concentration.share_pct)} of net revenue.`
+          }`}
         >
           <BreakdownTable rows={data.items} labelHeader="Product" showKey sort={sort} order={order} onSort={onSort} />
           <div className="mt-4 flex items-center justify-between text-sm text-ink-2">

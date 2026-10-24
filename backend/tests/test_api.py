@@ -83,3 +83,8 @@ def test_database_failure_returns_503_without_internals(client, kpi_data, monkey
     r = client.get("/api/v1/dashboard/overview", params=JAN)
     assert r.status_code == 503 and r.json()["error"]["code"] == "database_unavailable"
     assert "hunter2" not in r.text and "SELECT" not in r.text
+
+
+def test_security_headers(client):
+    r = client.get("/api/v1/health")
+    assert r.headers["X-Content-Type-Options"] == "nosniff" and r.headers["X-Frame-Options"] == "DENY"

@@ -5,12 +5,14 @@ from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Text,
@@ -23,6 +25,7 @@ from app.db.session import Base
 CHANNELS = ("in_store", "online", "marketplace")
 ORDER_STATUSES = ("completed", "cancelled", "returned")
 IMPORT_STATUSES = ("processing", "completed", "failed", "rejected")
+IMPORT_SOURCES = ("upload", "synthetic_demo")
 
 Money = Numeric(12, 2)
 
@@ -79,11 +82,14 @@ class Product(Base):
 
 class DataImport(Base):
     __tablename__ = "data_imports"
-    __table_args__ = (CheckConstraint(_in("status", IMPORT_STATUSES), name="ck_data_imports_status"),)
+    __table_args__ = (CheckConstraint(_in("status", IMPORT_STATUSES), name="ck_data_imports_status"),
+                      CheckConstraint(_in("source", IMPORT_SOURCES), name="ck_data_imports_source"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
     organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
     filename: Mapped[str] = mapped_column(String(255))
+    # "synthetic_demo" for the generated demo dataset, so the UI never presents it as real business data.
+    source: Mapped[str] = mapped_column(String(30), default="upload", server_default="upload")
     file_sha256: Mapped[str] = mapped_column(String(64), index=True)
     status: Mapped[str] = mapped_column(String(20), default="processing")
     rows_received: Mapped[int] = mapped_column(Integer, default=0)
@@ -192,3 +198,46 @@ class AiInsight(Base):
     analysis_run_id: Mapped[int | None] = mapped_column(ForeignKey("analysis_runs.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     duration_ms: Mapped[int | None] = mapped_column(Integer)
+
+
+REPORT_TYPES = ("executive", "sales", "product", "store", "customer", "profitability")
+REPORT_FORMATS = ("pdf", "csv")
+
+
+class Report(Base):
+    """A generated report file. The bytes are stored in the database so reports survive restarts and hosts with
+    ephemeral disks (free-tier web services); files are small (tables, no images)."""
+
+    __tablename__ = "reports"
+    __table_args__ = (
+        CheckConstraint(_in("report_type", REPORT_TYPES), name="ck_reports_type"),
+        CheckConstraint(_in("file_format", REPORT_FORMATS), name="ck_reports_format"),
+        Index("ix_reports_org_created", "organization_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"))
+    report_type: Mapped[str] = mapped_column(String(30))
+    title: Mapped[str] = mapped_column(String(200))
+    file_format: Mapped[str] = mapped_column(String(10))
+    filename: Mapped[str] = mapped_column(String(200))
+    params: Mapped[dict] = mapped_column(JSON, default=dict)
+    content: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    contains_synthetic: Mapped[bool] = mapped_column(Boolean, default=False)
+    requested_by: Mapped[str] = mapped_column(String(20), default="ui")  # ui | automation
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
+
+
+class AutomationEvent(Base):
+    """Items an automation workflow has already delivered, so n8n retries never send the same alert twice."""
+
+    __tablename__ = "automation_events"
+    __table_args__ = (UniqueConstraint("organization_id", "workflow", "item_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"))
+    workflow: Mapped[str] = mapped_column(String(50))
+    item_key: Mapped[str] = mapped_column(String(250))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
