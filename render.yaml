@@ -18,8 +18,8 @@ services:
         value: 3.13.7
       - key: ENVIRONMENT
         value: production
-      - key: READ_ONLY_MODE
-        value: "true"
+      - key: READ_ONLY_MODE  # "false" lets anyone with the site URL upload or replace data (there is no login)
+        value: "false"
       - key: DATABASE_URL          # Neon pooled URL
         sync: false
       - key: DATABASE_URL_DIRECT   # Neon direct URL (migrations)

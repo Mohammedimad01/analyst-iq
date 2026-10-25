@@ -93,6 +93,33 @@ def test_reimport_never_overwrites_existing_orders(client, db):
     assert count(db, m.Order) == 3
 
 
+def test_replace_swaps_all_sales_data(client, db, org_id):
+    assert upload(client, HEADER + GOOD).json()["status"] == "completed"
+    db.add(m.AnalysisRun(organization_id=org_id, analysis_type="anomaly_detection"))
+    db.commit()
+    new = "B1,2025-04-01,S9,online,,P9,Lamp,Z,3,5.00,0,2.00,completed\n"
+    r = client.post("/api/v1/data/imports", files={"file": ("new.csv", (HEADER + new).encode())}, data={"replace": "true"})
+    body = r.json()
+    assert body["status"] == "completed" and "Replaced" in body["message"], body
+    assert db.scalars(select(m.Order.order_number)).all() == ["B1"]
+    assert db.scalars(select(m.Store.store_code)).all() == ["S9"] and db.scalars(select(m.Product.sku)).all() == ["P9"]
+    assert count(db, m.Customer) == 0 and count(db, m.AnalysisRun) == 0
+    assert count(db, m.DataImport) == 2  # history is kept
+    # Re-uploading a file that was imported before is allowed when replacing.
+    again = client.post("/api/v1/data/imports", files={"file": ("orders.csv", (HEADER + GOOD).encode())},
+                        data={"replace": "true"}).json()
+    assert again["status"] == "completed" and count(db, m.Order) == 2
+
+
+def test_replace_with_invalid_file_keeps_existing_data(client, db):
+    assert upload(client, HEADER + GOOD).json()["status"] == "completed"
+    bad = "Z1,not-a-date,S1,in_store,,P1,Widget,X,1,10,0,6,completed\n"
+    body = client.post("/api/v1/data/imports", files={"file": ("bad.csv", (HEADER + bad).encode())},
+                       data={"replace": "true"}).json()
+    assert body["status"] == "rejected" and "Existing data was kept" in body["message"]
+    assert count(db, m.Order) == 2
+
+
 def test_identical_file_is_rejected(client, db):
     assert upload(client, HEADER + GOOD).json()["status"] == "completed"
     body = upload(client, HEADER + GOOD).json()

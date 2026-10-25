@@ -98,6 +98,7 @@ function Uploader({ onImported, readOnly }: { onImported: () => void; readOnly: 
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportRead | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [replace, setReplace] = useState(true);
 
   const choose = (f: File | undefined) => {
     setResult(null);
@@ -124,6 +125,7 @@ function Uploader({ onImported, readOnly }: { onImported: () => void; readOnly: 
     try {
       const body = new FormData();
       body.append("file", file);
+      body.append("replace", String(replace));
       const res = await apiFetch<ImportRead>(buildUrl("/data/imports"), { method: "POST", body });
       setResult(res);
       onImported();
@@ -188,6 +190,21 @@ function Uploader({ onImported, readOnly }: { onImported: () => void; readOnly: 
           )}
         </div>
       </div>
+      <fieldset className="mt-4">
+        <legend className="text-sm font-medium text-ink">When importing</legend>
+        {[
+          { value: true, label: "Replace existing data", hint: "The dashboard shows only this file. Existing orders, analyses and AI insights are removed; import history and reports are kept." },
+          { value: false, label: "Add to existing data", hint: "New orders are added; orders that already exist are skipped, never overwritten." },
+        ].map((o) => (
+          <label key={o.label} className="mt-2 flex cursor-pointer gap-2 text-sm">
+            <input type="radio" name="import-mode" className="mt-1 accent-primary" checked={replace === o.value} onChange={() => setReplace(o.value)} />
+            <span>
+              <span className="font-medium text-ink">{o.label}</span>
+              <span className="block text-xs text-ink-3">{o.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
       {error && (
         <p className="mt-3 rounded-md bg-negative-soft px-3 py-2 text-sm text-negative" role="alert">
           {error}
@@ -207,7 +224,8 @@ function Uploader({ onImported, readOnly }: { onImported: () => void; readOnly: 
           <li>channel: in_store, online, marketplace · status: completed, cancelled, returned.</li>
           <li>Money uses plain numbers with at most 2 decimals; discount_amount is an absolute amount per line.</li>
           <li>If any line of an order is invalid, the whole order is rejected — orders are never imported partially.</li>
-          <li>Orders that already exist are never overwritten; uploading the same file twice is refused.</li>
+          <li>When adding, orders that already exist are never overwritten and the same file twice is refused.</li>
+          <li>When replacing, a file with no valid orders is refused and your existing data stays as it was.</li>
           <li>Excel formulas and macros are never executed; .xlsm files are not accepted.</li>
         </ul>
       </details>

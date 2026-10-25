@@ -1,7 +1,7 @@
 from pathlib import PurePath
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy import func, select
 
 from app.api.deps import DbSession, OrgId
@@ -18,7 +18,8 @@ router = APIRouter(prefix="/data/imports", tags=["data"])
 
 @router.post("", response_model=ImportRead, status_code=status.HTTP_201_CREATED,
              dependencies=[Depends(rate_limit("upload", 10))])
-def create_import(db: DbSession, org_id: OrgId, file: Annotated[UploadFile, File()]):
+def create_import(db: DbSession, org_id: OrgId, file: Annotated[UploadFile, File()],
+                  replace: Annotated[bool, Form()] = False):
     settings = get_settings()
     if settings.read_only_mode:
         raise AppError(403, "Uploads are disabled in this deployment (read-only demo). Load data with the CLI.",
@@ -32,7 +33,7 @@ def create_import(db: DbSession, org_id: OrgId, file: Annotated[UploadFile, File
         raise AppError(413, f"File is larger than {settings.max_upload_mb} MB.")
     if not content:
         raise AppError(400, "The uploaded file is empty.")
-    return run_import(db, org_id, filename, content, settings.max_import_rows, source="upload")
+    return run_import(db, org_id, filename, content, settings.max_import_rows, source="upload", replace=replace)
 
 
 @router.get("", response_model=ImportList)

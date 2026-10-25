@@ -6,10 +6,10 @@ import time
 from collections.abc import Iterable, Iterator
 from datetime import timedelta
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.orm import Session
 
-from app.models import Customer, DataImport, Order, OrderItem, Product, Store, utcnow
+from app.models import AiInsight, AnalysisRun, Customer, DataImport, Order, OrderItem, Product, Store, utcnow
 from app.services.ingestion.parsing import FileContentError, ParseResult, parse_rows, read_table, reject_orders
 
 log = logging.getLogger("analyst_iq.ingestion")
@@ -22,7 +22,9 @@ def _chunks(items: list, size: int = CHUNK) -> Iterator[list]:
 
 
 def run_import(db: Session, org_id: int, filename: str, content: bytes, max_rows: int,
-               source: str = "upload") -> DataImport:
+               source: str = "upload", replace: bool = False) -> DataImport:
+    """replace=True swaps the organisation's sales data for this file, in the same transaction as the write:
+    a file that is rejected or fails to write leaves the existing data untouched."""
     started = time.perf_counter()
     # A process killed mid-import leaves its record at "processing"; nothing was written (the data transaction
     # rolled back), so say so instead of showing it as running forever.
@@ -52,7 +54,7 @@ def run_import(db: Session, org_id: int, filename: str, content: bytes, max_rows
     duplicate_of = db.scalar(select(DataImport.id).where(
         DataImport.organization_id == org_id, DataImport.file_sha256 == record.file_sha256,
         DataImport.status == "completed", DataImport.id != record.id))
-    if duplicate_of is not None:
+    if duplicate_of is not None and not replace:
         return finish("rejected", f"This exact file was already imported (import #{duplicate_of}). Nothing was written.")
 
     try:
@@ -63,17 +65,22 @@ def run_import(db: Session, org_id: int, filename: str, content: bytes, max_rows
         return finish("rejected", f"The file has {len(df):,} rows; the limit is {max_rows:,}. Split it and retry.")
 
     result = parse_rows(df)
-    existing = _existing_order_numbers(db, org_id, list(result.orders))
-    reject_orders(result, {n: f"order {n} was already imported; existing orders are never overwritten"
-                           for n in existing})
+    if not replace:
+        existing = _existing_order_numbers(db, org_id, list(result.orders))
+        reject_orders(result, {n: f"order {n} was already imported; existing orders are never overwritten"
+                               for n in existing})
     if not result.orders:
-        return finish("rejected", "No valid orders found. See the row errors for details.", result)
+        return finish("rejected", "No valid orders found. See the row errors for details."
+                      + (" Existing data was kept." if replace else ""), result)
 
     try:
+        if replace:
+            _clear_sales_data(db, org_id)
         lines_written = _write_orders(db, org_id, record.id, result)
         record.rows_accepted = lines_written
         record.orders_accepted = len(result.orders)
-        summary = f"Imported {len(result.orders):,} orders ({lines_written:,} lines)."
+        summary = ("Replaced all previous sales data. " if replace else "") + \
+            f"Imported {len(result.orders):,} orders ({lines_written:,} lines)."
         if result.rows_rejected:
             summary += f" {result.rows_rejected:,} rows rejected."
         return finish("completed", summary, result)  # commits data and status together
@@ -85,6 +92,15 @@ def run_import(db: Session, org_id: int, filename: str, content: bytes, max_rows
         record.orders_accepted = 0
         return finish("failed", "The database rejected the import, so nothing was written. Try again; if it "
                                 "keeps failing, check the server logs.", result)
+
+
+def _clear_sales_data(db: Session, org_id: int) -> None:
+    """Delete the organisation's sales facts and the analyses/AI insights computed from them. No commit: the caller
+    commits together with the new data. Import history, reports and automation records are kept as an audit trail."""
+    order_ids = select(Order.id).where(Order.organization_id == org_id)
+    db.execute(delete(OrderItem).where(OrderItem.order_id.in_(order_ids)))
+    for model in (Order, Customer, Product, Store, AiInsight, AnalysisRun):  # children before parents
+        db.execute(delete(model).where(model.organization_id == org_id))
 
 
 def _existing_order_numbers(db: Session, org_id: int, numbers: list[str]) -> set[str]:
