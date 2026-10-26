@@ -193,6 +193,13 @@ def test_automation_requires_configured_key(client, kpi_data, monkeypatch):
     assert client.post("/api/v1/automation/kpi-summary", json={}, headers={"X-API-Key": "wrong"}).status_code == 401
 
 
+def test_pasted_key_whitespace_and_quotes_are_ignored(monkeypatch):
+    from app.core.config import Settings
+
+    monkeypatch.setenv("AUTOMATION_API_KEY", f' "{KEY}"\n')
+    assert Settings(_env_file=None).automation_api_key == KEY
+
+
 def test_kpi_summary_and_delivery_dedupe(client, kpi_data, automation_key):
     body = {"period": "last_30_days", "anchor": "latest_data"}
     first = client.post("/api/v1/automation/kpi-summary", json=body, headers=automation_key).json()

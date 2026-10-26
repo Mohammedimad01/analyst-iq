@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     def normalise_optional_url(cls, value: str) -> str:
         return normalise_url(value)
 
+    @field_validator("automation_api_key", "gemini_api_key")
+    @classmethod
+    def strip_secret(cls, value: str) -> str:
+        # Keys pasted into a host dashboard often pick up a trailing newline or the quotes from a .env line.
+        return value.strip().strip("\"'").strip()
+
     @property
     def migration_database_url(self) -> str:
         return self.database_url_direct or self.database_url
