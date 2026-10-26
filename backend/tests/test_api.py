@@ -11,6 +11,11 @@ def test_health(client):
     assert isinstance(body["gemini_configured"], bool)
 
 
+def test_ping_needs_no_database(client):
+    assert client.get("/api/v1/ping").json() == {"status": "ok"}
+    assert client.head("/api/v1/ping").status_code == 200
+
+
 def test_filters_empty_then_populated(client, db):
     assert client.get("/api/v1/dashboard/filters").json()["has_data"] is False
 

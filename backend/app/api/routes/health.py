@@ -12,6 +12,12 @@ log = logging.getLogger("analyst_iq.health")
 VERSION = "0.1.0"
 
 
+@router.api_route("/ping", methods=["GET", "HEAD"])
+def ping() -> dict:
+    """Keep-awake target for an uptime pinger. No database access, so pings never wake or bill the database."""
+    return {"status": "ok"}
+
+
 @router.get("/health", response_model=Health)
 def health(db: DbSession) -> Health:
     settings = get_settings()

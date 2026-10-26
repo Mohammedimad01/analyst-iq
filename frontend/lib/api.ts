@@ -26,8 +26,36 @@ export function buildUrl(path: string, params: Record<string, QueryValue> = {}):
   return `${API_URL}/api/v1${path}${qs ? `?${qs}` : ""}`;
 }
 
+// The free-tier API sleeps when idle and takes up to about a minute to wake; Render's proxy may answer 502-504
+// meanwhile. Reads wait longer and retry; writes never retry, so nothing is ever submitted twice.
+const READ_TIMEOUT_MS = 60_000;
+const READ_ATTEMPTS = 3;
+const RETRY_STATUSES = new Set([502, 503, 504]);
+
+function wait(ms: number, signal?: AbortSignal | null): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason);
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => (clearTimeout(t), reject(signal.reason)), { once: true });
+  });
+}
+
 export async function apiFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
-  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  const isRead = (init.method ?? "GET").toUpperCase() === "GET";
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetchOnce<T>(url, init, isRead ? READ_TIMEOUT_MS : TIMEOUT_MS);
+    } catch (err) {
+      const transient =
+        err instanceof ApiError && (err.code === "timeout" || err.code === "network_error" || RETRY_STATUSES.has(err.status));
+      if (!isRead || !transient || attempt >= READ_ATTEMPTS) throw err;
+      await wait(2_000 * attempt, init.signal);
+    }
+  }
+}
+
+async function fetchOnce<T>(url: string, init: RequestInit, timeoutMs: number): Promise<T> {
+  const timeout = AbortSignal.timeout(timeoutMs);
   const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
   let response: Response;
   try {
