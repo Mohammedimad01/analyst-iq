@@ -21,8 +21,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
+import { LogoMark } from "@/components/shell/Brand";
 import { FilterBar } from "@/components/shell/FilterBar";
 import { FiltersProvider, useFilters } from "@/components/shell/FiltersProvider";
+import { Splash } from "@/components/shell/Splash";
 import { StatusIndicator } from "@/components/shell/StatusIndicator";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { dataBadge } from "@/lib/workspace";
@@ -67,14 +69,13 @@ const isActive = (href: string, pathname: string) => (href === "/" ? pathname ==
 
 function Wordmark({ collapsed }: { collapsed: boolean }) {
   return (
-    <Link href="/" className="flex items-baseline gap-1 px-2 text-ink" aria-label="Analyst IQ, overview">
-      {collapsed ? (
-        <span className="font-serif text-xl font-semibold">IQ</span>
-      ) : (
-        <>
+    <Link href="/" className="flex items-center gap-2 px-2 text-ink" aria-label="Analyst IQ, overview">
+      <LogoMark className="size-7 shrink-0" />
+      {!collapsed && (
+        <span className="flex items-baseline gap-1">
           <span className="font-serif text-[22px] font-medium tracking-tight">Analyst</span>
           <span className="font-serif text-[22px] font-semibold italic tracking-tight text-primary">IQ</span>
-        </>
+        </span>
       )}
     </Link>
   );
@@ -123,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function Shell({ children }: { children: ReactNode }) {
-  const { workspace } = useFilters();
+  const { workspace, options, optionsError } = useFilters();
   const badge = dataBadge(workspace?.data_kind);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -132,6 +133,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      <Splash loading={!options && !optionsError} />
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-page px-3 pb-3 pt-5 transition-[width] duration-200 md:flex ${
           collapsed ? "w-16" : "w-56"

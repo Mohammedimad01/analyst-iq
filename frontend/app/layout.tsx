@@ -10,7 +10,7 @@ const newsreader = Newsreader({ variable: "--font-newsreader", subsets: ["latin"
 
 export const metadata: Metadata = {
   title: { default: "Analyst IQ", template: "%s · Analyst IQ" },
-  description: "Retail analytics: verified KPIs, dashboards and data quality for sales data.",
+  description: "Verified retail analytics, explained: KPIs, anomaly detection and AI insights for sales data.",
 };
 
 // Applies a saved theme before first paint so there is no light/dark flash. OS preference applies otherwise.
