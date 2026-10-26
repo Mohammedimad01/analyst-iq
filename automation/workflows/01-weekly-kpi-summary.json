@@ -32,7 +32,7 @@
             {
               "id": "aa5c4982-b873-58c4-95c6-22976337941d",
               "name": "apiUrl",
-              "value": "http://localhost:8000",
+              "value": "https://analyst-iq-api.onrender.com",
               "type": "string"
             },
             {
@@ -71,7 +71,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"period\": \"previous_week\", \"anchor\": \"today\", \"include_ai\": false}"
+        "jsonBody": "={\"period\": \"previous_week\", \"anchor\": \"latest_data\", \"include_ai\": false}"
       },
       "id": "22a54aed-e044-5a74-a964-488fb2a3d409",
       "name": "Get KPI summary",

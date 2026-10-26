@@ -30,7 +30,7 @@
             {
               "id": "aa5c4982-b873-58c4-95c6-22976337941d",
               "name": "apiUrl",
-              "value": "http://localhost:8000",
+              "value": "https://analyst-iq-api.onrender.com",
               "type": "string"
             },
             {

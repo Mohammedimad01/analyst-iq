@@ -30,7 +30,7 @@
             {
               "id": "aa5c4982-b873-58c4-95c6-22976337941d",
               "name": "apiUrl",
-              "value": "http://localhost:8000",
+              "value": "https://analyst-iq-api.onrender.com",
               "type": "string"
             },
             {
@@ -69,7 +69,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"type\": \"executive\", \"format\": \"pdf\", \"period\": \"previous_month\", \"anchor\": \"today\"}"
+        "jsonBody": "={\"type\": \"executive\", \"format\": \"pdf\", \"period\": \"previous_month\", \"anchor\": \"latest_data\"}"
       },
       "id": "005aa66e-e3fb-50be-90dd-cfd3d20e074b",
       "name": "Generate report",
